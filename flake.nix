@@ -1,7 +1,7 @@
 {
   description = "ditl — декларации ITL 002 / ITL 004 в браузере";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
   outputs = { nixpkgs, ... }:
     let
@@ -11,8 +11,7 @@
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          # typst — чтобы править шаблоны и собирать скачанные .typ локально.
-          packages = [ pkgs.nodejs_24 pkgs.typst ];
+          packages = [ pkgs.nodejs_24 pkgs.git pkgs.typst ];
         };
       });
     };
