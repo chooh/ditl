@@ -90,6 +90,8 @@ type SectionsApi = {
   openForKeys(keys: string[]): void
   /** Свернуть или раскрыть всё; `forget` сбрасывает отметки о посещении. */
   setAll(open: boolean, options?: { forget?: boolean }): void
+  /** Для только что загруженных значений: свернуть готовые разделы, раскрыть остальные, забыть посещения. */
+  collapseCompleted(values: DeclarationInput): void
   done: number
   total: number
 }
@@ -105,6 +107,16 @@ export function useSections(): SectionsApi {
 const allIds = SECTIONS.map((s) => s.id)
 const byId = <T,>(ids: readonly SectionId[], value: T) => Object.fromEntries(ids.map((id) => [id, value])) as Record<SectionId, T>
 
+function countIssues(values: DeclarationInput): Record<SectionId, number> {
+  const issues = byId(allIds, 0)
+  const result = declarationSchema.safeParse(values)
+  for (const issue of result.success ? [] : result.error.issues) {
+    const id = sectionOfKey.get(String(issue.path[0]))
+    if (id) issues[id]++
+  }
+  return issues
+}
+
 export function SectionsProvider({ children }: { children: ReactNode }) {
   const { control, getValues } = useFormContext<DeclarationInput>()
   // Подписка на все поля: провайдер перерисовывается при каждом изменении,
@@ -116,12 +128,7 @@ export function SectionsProvider({ children }: { children: ReactNode }) {
   const [visited, setVisited] = useState(() => byId(allIds, false))
 
   // Полная проверка схемой на каждое изменение — доли миллисекунды для ~60 полей.
-  const issues = byId(allIds, 0)
-  const result = declarationSchema.safeParse(values)
-  for (const issue of result.success ? [] : result.error.issues) {
-    const id = sectionOfKey.get(String(issue.path[0]))
-    if (id) issues[id]++
-  }
+  const issues = countIssues(values)
 
   const api: SectionsApi = {
     get: (id) => ({
@@ -140,6 +147,11 @@ export function SectionsProvider({ children }: { children: ReactNode }) {
     setAll: (value, options) => {
       setOpenMap(byId(allIds, value))
       if (options?.forget) setVisited(byId(allIds, false))
+    },
+    collapseCompleted: (loaded) => {
+      const loadedIssues = countIssues(loaded)
+      setOpenMap(Object.fromEntries(allIds.map((id) => [id, loadedIssues[id] > 0])) as Record<SectionId, boolean>)
+      setVisited(byId(allIds, false))
     },
     done: allIds.filter((id) => issues[id] === 0).length,
     total: allIds.length,

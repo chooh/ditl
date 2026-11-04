@@ -299,3 +299,52 @@ input[aria-invalid='true'] {
 .dev-tools button {
   margin-top: 0;
 }
+
+/* ── Черновики ── */
+.drafts {
+  margin-bottom: 16px;
+}
+
+.drafts .actions {
+  align-items: center;
+}
+
+.drafts .actions button {
+  margin-top: 0;
+}
+
+.drafts button.link:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+.drafts-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.drafts-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.drafts-list button.link {
+  margin-top: 0;
+}
+
+.draft-title {
+  flex: 1;
+  min-width: 12em;
+}
+
+.draft-time,
+.draft-current {
+  color: var(--muted);
+  font-size: 0.875rem;
+}

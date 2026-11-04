@@ -15,15 +15,19 @@ import {
 import { sampleDeclaration } from './form/sample'
 import { Section, SectionsProvider, useSections } from './form/sections'
 import { PdfPreview, type GeneratedPdf } from './PdfPreview'
+import { DraftsPanel, useDrafts } from './drafts/Drafts'
+import { loadActiveDraft, type Draft } from './drafts/storage'
 import { downloadUrl } from './pdf/download'
 
 /** Инструменты разработчика: в `npm run dev` всегда, в сборке — только с `?debug`. */
 const debugEnabled = import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug')
 
 export function App() {
+  // Черновик, открытый в прошлый раз, восстанавливается сразу — без мелькания пустой формы.
+  const [restored] = useState(loadActiveDraft)
   const form = useForm<DeclarationInput, unknown, Declaration>({
     resolver: zodResolver(declarationSchema),
-    defaultValues: emptyDeclaration(),
+    defaultValues: restored?.values ?? emptyDeclaration(),
     mode: 'onTouched',
   })
   const [debug, setDebug] = useState(false)
@@ -68,7 +72,7 @@ export function App() {
       <FormProvider {...form}>
         <SectionsProvider>
           {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
-          <DeclarationForm hidden={!!pdf} onValid={onSubmit} error={error} setError={setError} debug={debug} setDebug={setDebug} />
+          <DeclarationForm restored={restored} hidden={!!pdf} onValid={onSubmit} error={error} setError={setError} debug={debug} setDebug={setDebug} />
         </SectionsProvider>
       </FormProvider>
     </main>
@@ -76,6 +80,7 @@ export function App() {
 }
 
 type DeclarationFormProps = {
+  restored: Draft | undefined
   hidden: boolean
   onValid: (data: Declaration) => Promise<void>
   error: string | undefined
@@ -84,9 +89,10 @@ type DeclarationFormProps = {
   setDebug: (debug: boolean) => void
 }
 
-function DeclarationForm({ hidden, onValid, error, setError, debug, setDebug }: DeclarationFormProps) {
+function DeclarationForm({ restored, hidden, onValid, error, setError, debug, setDebug }: DeclarationFormProps) {
   const form = useFormContext<DeclarationInput, unknown, Declaration>()
   const sections = useSections()
+  const drafts = useDrafts(restored, () => setError(undefined))
 
   const onInvalid = (errors: FieldErrors<DeclarationInput>) => {
     // Синхронно раскрыть разделы с ошибками — сразу после этого react-hook-form
@@ -99,30 +105,14 @@ function DeclarationForm({ hidden, onValid, error, setError, debug, setDebug }: 
     <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate hidden={hidden}>
       {debugEnabled && (
         <div className="dev-tools">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              form.reset(sampleDeclaration())
-              sections.setAll(false)
-              setError(undefined)
-            }}
-          >
+          {/* Тестовые данные — отдельным черновиком, текущий не затирается. */}
+          <button type="button" className="secondary" onClick={() => drafts.startNew(sampleDeclaration())}>
             Completează cu date de test
-          </button>
-          <button
-            type="button"
-            className="link"
-            onClick={() => {
-              form.reset(emptyDeclaration())
-              sections.setAll(true, { forget: true })
-              setError(undefined)
-            }}
-          >
-            Golește formularul
           </button>
         </div>
       )}
+
+      <DraftsPanel drafts={drafts} />
 
       <p className="progress" aria-live="polite">
         Secțiuni gata: {sections.done} din {sections.total}
