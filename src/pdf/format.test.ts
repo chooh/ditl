@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatIban, formatMoney, splitSector } from './format'
+import { formatDate, formatIban, formatMoney, sectorNumber, splitSector } from './format'
 
 describe('форматирование для печати', () => {
   it('дата', () => {
     expect(formatDate('2024-01-31')).toBe('31.01.2024')
     expect(formatDate('')).toBe('')
+    expect(formatDate(new Date(2024, 0, 31))).toBe('31.01.2024')
+    expect(formatDate(null)).toBe('')
   })
 
   it('сумма', () => {
@@ -18,5 +20,11 @@ describe('форматирование для печати', () => {
     expect(splitSector('Sector 2')).toEqual({ judet: 'București', sector: '2' })
     expect(splitSector('sectorul 6')).toEqual({ judet: 'București', sector: '6' })
     expect(splitSector('Ilfov')).toEqual({ judet: 'Ilfov', sector: '' })
+  })
+
+  it('номер сектора из «satul/sectorul»', () => {
+    expect(sectorNumber('Sector 2')).toBe('2')
+    expect(sectorNumber('2')).toBe('2')
+    expect(sectorNumber('Corbeanca')).toBeUndefined()
   })
 })

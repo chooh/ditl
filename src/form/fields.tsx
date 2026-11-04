@@ -1,11 +1,10 @@
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react'
+import { useId, type InputHTMLAttributes } from 'react'
 import { useFieldArray, useFormContext, type Path } from 'react-hook-form'
-import type { DeclarationInput as Itl002Input } from '../itl002/schema'
-import type { DeclarationInput as Itl004Input } from '../itl004/schema'
-import { MAX_ANNEXES } from './common'
+import type { DossierInput } from '../dossier/schema'
+import { MAX_ATTACHMENTS } from './common'
 
-/** Путь к полю любой из деклараций: опечатка в имени поля — ошибка компиляции. */
-export type FieldPath = Path<Itl002Input> | Path<Itl004Input>
+/** Путь к полю досье: опечатка в имени поля — ошибка компиляции. */
+export type FieldPath = Path<DossierInput>
 
 function useFieldError(name: FieldPath) {
   const { getFieldState, formState } = useFormContext()
@@ -47,16 +46,6 @@ export function TextField({ name, label, wide, ...input }: TextFieldProps) {
   )
 }
 
-export function Checkbox({ name, children }: { name: FieldPath; children: ReactNode }) {
-  const { register } = useFormContext()
-  return (
-    <label className="checkbox">
-      <input type="checkbox" {...register(name)} />
-      {children}
-    </label>
-  )
-}
-
 export function RadioGroup({ name, legend, options }: { name: FieldPath; legend: string; options: readonly (readonly [string, string])[] }) {
   const { register } = useFormContext()
   return (
@@ -76,33 +65,31 @@ export function RadioGroup({ name, legend, options }: { name: FieldPath; legend:
 }
 
 const ADDRESS_FIELDS = {
-  strada: ['Strada', 'address-line1'],
-  nr: ['Nr.', ''],
-  codPostal: ['Cod poștal', 'postal-code'],
-  bloc: ['Bloc', ''],
-  scara: ['Scara', ''],
-  etaj: ['Etaj', ''],
-  apartament: ['Apartament', ''],
-  localitate: ['Localitatea', 'address-level2'],
-  judet: ['Județul/Sectorul', 'address-level1'],
-  tara: ['Țara', 'country-name'],
+  street: ['Strada', 'address-line1'],
+  number: ['Nr.', ''],
+  postalCode: ['Cod poștal', 'postal-code'],
+  block: ['Bloc', ''],
+  entrance: ['Scara', ''],
+  floor: ['Etaj', ''],
+  apartment: ['Apartament', ''],
+  locality: ['Localitatea', 'address-level2'],
+  county: ['Județul/Sectorul', 'address-level1'],
+  country: ['Țara', 'country-name'],
 } as const
 export type AddressField = keyof typeof ADDRESS_FIELDS
 
 /**
- * Поля адреса. `section` — токен автозаполнения (section-*), чтобы браузер не путал
- * адрес фирмы, адрес для переписки и адрес представителя.
+ * Поля почтового адреса. `section` — токен автозаполнения (section-*), чтобы браузер
+ * не путал адрес фирмы, адрес для переписки и домициль подписанта.
  */
 export function AddressFields({
   prefix,
   fields,
   section,
-  labels = {},
 }: {
-  prefix: 'contribuabil.sediu' | 'contribuabil.corespondenta' | 'imputernicit.adresa' | 'cladire.adresa' | 'reprezentant.domiciliu'
+  prefix: 'company.seat' | 'company.correspondence' | 'signatory.address'
   fields: readonly AddressField[]
   section: string
-  labels?: Partial<Record<AddressField, string>>
 }) {
   return (
     <div className="grid">
@@ -112,10 +99,10 @@ export function AddressFields({
           <TextField
             key={key}
             name={`${prefix}.${key}`}
-            label={labels[key] ?? label}
-            wide={key === 'strada'}
+            label={label}
+            wide={key === 'street'}
             autoComplete={token ? `section-${section} ${token}` : 'off'}
-            inputMode={key === 'codPostal' ? 'numeric' : undefined}
+            inputMode={key === 'postalCode' ? 'numeric' : undefined}
           />
         )
       })}
@@ -123,66 +110,30 @@ export function AddressFields({
   )
 }
 
-/** Список приложенных документов — одинаковый в обеих декларациях. */
-export function AnnexesFields() {
-  const { control } = useFormContext<{ anexe: { denumire: string }[] }>()
-  const { fields, append, remove } = useFieldArray({ control, name: 'anexe' })
+export type AttachmentsPath = 'attachments' | `deeds.${number}.attachments` | `properties.${number}.attachments`
+
+/** Список приложенных документов (anexe). */
+export function AttachmentsFields({ name, label }: { name: AttachmentsPath; label: string }) {
+  const { control } = useFormContext<DossierInput>()
+  // Все три вида списков устроены одинаково; типы RHF не выводят это для объединения путей.
+  const { fields, append, remove } = useFieldArray({ control, name: name as 'attachments' })
   return (
     <>
-      <p className="hint">
-        Copii ale documentelor, certificate de conformitate cu originalul (art. 64 alin. (5) din Legea nr. 207/2015).
-      </p>
       {fields.map((field, i) => (
         <div key={field.id} className="annex">
-          <TextField name={`anexe.${i}.denumire`} label={`${i + 1}.`} autoComplete="off" />
+          <TextField name={`${name}.${i}.name`} label={`${i + 1}.`} aria-label={`${label}: documentul ${i + 1}`} autoComplete="off" />
           {fields.length > 1 && (
-            <button type="button" className="link" onClick={() => remove(i)} aria-label={`Șterge documentul ${i + 1}`}>
+            <button type="button" className="link" onClick={() => remove(i)} aria-label={`${label}: șterge documentul ${i + 1}`}>
               Șterge
             </button>
           )}
         </div>
       ))}
-      {fields.length < MAX_ANNEXES && (
-        <button type="button" className="secondary" onClick={() => append({ denumire: '' })}>
+      {fields.length < MAX_ATTACHMENTS && (
+        <button type="button" className="secondary" onClick={() => append({ name: '' })} aria-label={`${label}: adaugă document`}>
           Adaugă document
         </button>
       )}
-    </>
-  )
-}
-
-/** Согласие на электронную переписку — поле реквизитов юрлица, общее для обеих деклараций. */
-export function EmailConsent() {
-  return (
-    <RadioGroup
-      name="contribuabil.comunicareEmail"
-      legend="Sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică"
-      options={[
-        ['da', 'DA'],
-        ['nu', 'NU'],
-      ]}
-    />
-  )
-}
-
-/** Документ подписанта; в ITL 004 — без «eliberat de» и даты выдачи. */
-export function IdentityFields({ full = true }: { full?: boolean }) {
-  return (
-    <>
-      <TextField name="actIdentitate.tip" label="Tipul actului de identitate" list="id-types" autoComplete="off" />
-      <TextField name="actIdentitate.serie" label="Seria" autoComplete="off" />
-      <TextField name="actIdentitate.numar" label="Numărul" autoComplete="off" />
-      {full && (
-        <>
-          <TextField name="actIdentitate.data" label="La data de" type="date" autoComplete="off" />
-          <TextField name="actIdentitate.eliberatDe" label="Eliberat de" wide autoComplete="off" />
-        </>
-      )}
-      <datalist id="id-types">
-        <option value="CI" />
-        <option value="BI" />
-        <option value="Pașaport" />
-      </datalist>
     </>
   )
 }

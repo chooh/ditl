@@ -125,9 +125,14 @@ declar că:
 
 Anexez la prezenta declarație copii ale documentelor, certificate de conformitate cu originalul, conform art. 64 alin. (5)
 din Legea nr. 207/2015 privind Codul de procedură fiscală, cu modificările și completările ulterioare, după cum urmează:
-// Без приложений — три пустые строки, как на бланке.
-#let anexe = if d.anexe.len() > 0 { d.anexe } else { (dots(8cm),) * 3 }
-#pad(left: 1.5em, enum(tight: true, ..anexe))
+// По три в строку, нумерация слева направо, как на бланке. Без приложений — три пустых места.
+#let anexe = if d.anexe.len() > 0 { d.anexe } else { (dots(7cm),) * 3 }
+#pad(left: 1.5em, grid(
+  columns: (1fr,) * 3,
+  column-gutter: 1em,
+  row-gutter: 0.4em,
+  ..anexe.enumerate().map(((i, a)) => [#(i + 1). #a]),
+))
 
 Prin semnarea prezentei am luat la cunoștință că declararea necorespunzătoare a adevărului se pedepsește conform legii penale,
 cele declarate fiind corecte și complete.

@@ -147,6 +147,7 @@ main.wide {
 }
 
 input:not([type='checkbox']),
+select,
 textarea {
   font: inherit;
   padding: 8px 10px;
@@ -352,13 +353,7 @@ input[aria-invalid='true'] {
   font-size: 0.875rem;
 }
 
-.draft-form {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-/* ── ITL 004: участки ── */
+/* ── Акты и объекты досье ── */
 .parcel {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -398,6 +393,35 @@ input[aria-invalid='true'] {
 .preview > .actions button,
 .preview > button {
   margin-top: 8px;
+}
+
+.documents {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.documents li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.document-label {
+  flex: 1;
+  min-width: 12em;
+}
+
+.documents button.link {
+  margin-top: 0;
+  overflow-wrap: anywhere;
+}
+
+.preview select {
+  max-width: 100%;
 }
 
 .pdf-status {

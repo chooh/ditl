@@ -1,7 +1,9 @@
-/** 2024-01-31 → 31.01.2024; пустая строка остаётся пустой. */
-export function formatDate(iso: string): string {
-  if (!iso) return ''
-  const [y, m, d] = iso.split('-')
+import { isoDate } from '../form/common'
+
+/** 2024-01-31 или Date → 31.01.2024; пустая строка и null — пустая строка. */
+export function formatDate(value: string | Date | null): string {
+  if (!value) return ''
+  const [y, m, d] = (value instanceof Date ? isoDate(value) : value).split('-')
   return `${d}.${m}.${y}`
 }
 
@@ -27,4 +29,12 @@ export function formatIban(iban: string): string {
 export function splitSector(judetSector: string): { judet: string; sector: string } {
   const m = /^sector(?:ul)?\s*(\d)$/i.exec(judetSector.trim())
   return m ? { judet: 'București', sector: m[1]! } : { judet: judetSector, sector: '' }
+}
+
+/**
+ * «Satul/sectorul» объекта → номер сектора Бухареста, если это сектор:
+ * «Sector 2», «sectorul 2», «2» → «2»; село — undefined.
+ */
+export function sectorNumber(district: string): string | undefined {
+  return /^(?:sector(?:ul)?\s*)?(\d)$/i.exec(district.trim())?.[1]
 }

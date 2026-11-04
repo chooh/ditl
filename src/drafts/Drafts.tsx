@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFormContext } from 'react-hook-form'
-import { FORM_IDS, FORMS, forSameTaxpayer, type FormId } from '../forms'
+import { forSameCompany, type DossierInput } from '../dossier/schema'
 import { useSections } from '../form/sections'
 import { deleteDraft, draftTitle, isBlank, listDrafts, loadDraft, saveDraft, setActiveDraft, STORAGE_KEY, type Draft } from './storage'
 
@@ -10,15 +10,14 @@ const SAVE_DELAY = 500
 type Status = { savedAt?: number; failed?: boolean }
 
 /**
- * Что открыть в форме. Любая смена — другой черновик, новая декларация, другой тип —
- * пересоздаёт форму с этими значениями (см. App).
+ * Что открыть в форме. Любая смена — другой черновик или новое досье — пересоздаёт
+ * форму с этими значениями (см. App).
  */
 export type Session = {
-  form: FormId
   /** Открытый черновик. */
   draft?: Draft
-  /** Значения новой декларации без черновика (например, данные той же фирмы); сразу сохраняются. */
-  initial?: Record<string, unknown>
+  /** Значения нового досье без черновика (например, данные той же фирмы); сразу сохраняются. */
+  initial?: DossierInput
 }
 
 export type DraftsApi = ReturnType<typeof useDrafts>
@@ -29,8 +28,7 @@ export type DraftsApi = ReturnType<typeof useDrafts>
  * переключении черновика, уходе со страницы и размонтировании.
  */
 export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
-  const { form } = session
-  const { getValues, watch, formState } = useFormContext<Record<string, unknown>>()
+  const { getValues, watch, formState } = useFormContext<DossierInput>()
   const sections = useSections()
   const [list, setList] = useState(listDrafts)
   const [activeId, setActiveId] = useState(session.draft?.id)
@@ -46,9 +44,9 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     timer.current = undefined
     const values = getValues()
     const json = JSON.stringify(values)
-    if (detached.current || json === lastSaved.current || (!active.current && isBlank(form, values))) return
+    if (detached.current || json === lastSaved.current || (!active.current && isBlank(values))) return
     try {
-      const draft = saveDraft(active.current, form, values)
+      const draft = saveDraft(active.current, values)
       lastSaved.current = json
       active.current = draft.id
       setActiveId(draft.id)
@@ -58,7 +56,7 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
       setStatus({ failed: true })
     }
     setList(listDrafts())
-  }, [getValues, form])
+  }, [getValues])
 
   useEffect(() => {
     const subscription = watch(() => {
@@ -83,7 +81,7 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
   // Открытый черновик или перенесённые данные: готовые разделы свёрнуты, новые данные сразу сохранены.
   useLayoutEffect(() => {
     const loaded = session.draft?.values ?? session.initial
-    if (loaded && !isBlank(form, loaded)) sections.collapseCompleted(loaded)
+    if (loaded && !isBlank(loaded)) sections.collapseCompleted(loaded)
     if (session.initial) flush()
   }, []) // только при монтировании
 
@@ -92,18 +90,18 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     const draft = loadDraft(id)
     if (!draft) return setList(listDrafts())
     setActiveDraft(id)
-    onSwitch({ form: draft.form, draft })
+    onSwitch({ draft })
   }
 
-  /** Новая декларация типа `to`; `initial` — значения, с которых она начинается. */
-  const startNew = (to: FormId, initial?: Record<string, unknown>) => {
+  /** Новое досье; `initial` — значения, с которых оно начинается. */
+  const startNew = (initial?: DossierInput) => {
     flush()
     setActiveDraft(undefined)
-    onSwitch({ form: to, initial })
+    onSwitch({ initial })
   }
 
-  /** Следующая декларация той же фирмы: реквизиты и подписант переносятся, объект декларации — нет. */
-  const startForSameTaxpayer = (to: FormId) => startNew(to, forSameTaxpayer(form, structuredClone(getValues()), to) as Record<string, unknown>)
+  /** Новое досье той же фирмы: реквизиты и подписант переносятся, акты и объекты — нет. */
+  const startForSameCompany = () => startNew(forSameCompany(getValues()))
 
   const remove = (id: string) => {
     const draft = list.find((d) => d.id === id)
@@ -113,16 +111,15 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     } catch (e) {
       console.error(e)
     }
-    // Удалили открытый черновик — пустая форма того же типа; без detached
+    // Удалили открытый черновик — пустая форма; без detached
     // размонтирование сохранило бы удалённое заново.
     if (id === active.current) {
       detached.current = true
-      onSwitch({ form })
+      onSwitch({})
     } else setList(listDrafts())
   }
 
   return {
-    form,
     list,
     activeId,
     status,
@@ -130,7 +127,7 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     hasContent: !!activeId || formState.isDirty,
     open,
     startNew,
-    startForSameTaxpayer,
+    startForSameCompany,
     remove,
   }
 }
@@ -143,11 +140,8 @@ function formatSavedAt(ms: number): string {
   return (today ? timeOnly : dateTime).format(ms)
 }
 
-/** Чем отличается тип декларации — в подписи кнопки. */
-const OBJECT = { itl002: 'clădire', itl004: 'teren' } satisfies Record<FormId, string>
-
 export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
-  const { form, list, activeId, status, hasContent } = drafts
+  const { list, activeId, status, hasContent } = drafts
   const [expanded, setExpanded] = useState(false)
   const listId = useId()
   // Кнопки видны всегда (неактивные — пока нечего сохранять), чтобы форма не прыгала при первом сохранении.
@@ -167,23 +161,12 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
       )}
 
       <div className="actions">
-        <span className="actions-label">Declarație nouă:</span>
-        {FORM_IDS.map((id) => (
-          // Новая пустая декларация того же типа имеет смысл, только если текущая не пуста.
-          <NewButton key={id} prefix="Declarație nouă" label={`${FORMS[id].code} — ${OBJECT[id]}`} disabled={id === form && !hasContent} onClick={() => drafts.startNew(id)} />
-        ))}
-      </div>
-      <div className="actions">
-        <span className="actions-label">Același contribuabil:</span>
-        {FORM_IDS.map((id) => (
-          <NewButton
-            key={id}
-            prefix="Același contribuabil"
-            label={`${FORMS[id].code} — ${id === form && id === 'itl002' ? 'altă clădire' : OBJECT[id]}`}
-            disabled={!hasContent}
-            onClick={() => drafts.startForSameTaxpayer(id)}
-          />
-        ))}
+        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startNew()}>
+          Dosar nou
+        </button>
+        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startForSameCompany()}>
+          Dosar nou pentru aceeași firmă
+        </button>
         <button
           type="button"
           className="link"
@@ -201,9 +184,7 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
           const title = draftTitle(d)
           return (
             <li key={d.id}>
-              <span className="draft-title">
-                <span className="draft-form">{FORMS[d.form].code}</span> {title}
-              </span>
+              <span className="draft-title">{title}</span>
               <span className="draft-time">{formatSavedAt(d.updatedAt)}</span>
               {d.id === activeId ? (
                 <span className="draft-current">deschisă</span>
@@ -220,14 +201,5 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
         })}
       </ul>
     </div>
-  )
-}
-
-/** Подписи в двух рядах повторяются — в доступное имя входит и заголовок ряда. */
-function NewButton({ prefix, label, disabled, onClick }: { prefix: string; label: string; disabled: boolean; onClick: () => void }) {
-  return (
-    <button type="button" className="secondary" aria-label={`${prefix}: ${label}`} disabled={disabled} onClick={onClick}>
-      {label}
-    </button>
   )
 }

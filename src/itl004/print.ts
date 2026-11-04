@@ -1,81 +1,123 @@
-import { formatArea, formatDate, formatIban, splitSector } from '../pdf/format'
-import { LAND_ACQUISITION_TEXT, LAND_CATEGORIES, type Declaration } from './schema'
+import { acquiredOn, fullName, LAND_CATEGORIES, type AcquisitionForm, type Dossier, type LandCategory, type Property } from '../dossier/schema'
+import { formatArea, formatDate, formatIban, sectorNumber, splitSector } from '../pdf/format'
+import { attachmentsOf, deedOf } from '../print/common'
+
+/** «am dobândit/închiriat/concesionat/preluat în administrare/preluat în folosință un teren». */
+const FORM: Record<Exclude<AcquisitionForm, 'other'>, string> = {
+  ownership: 'dobândit',
+  lease: 'închiriat',
+  concession: 'concesionat',
+  administration: 'preluat în administrare',
+  use: 'preluat în folosință',
+}
+
+/** Категории площади — ключи шаблона. */
+const CATEGORY: Record<LandCategory, string> = {
+  builtUp: 'constructii',
+  arable: 'arabil',
+  pasture: 'pasune',
+  hayfield: 'faneata',
+  vineyardBearing: 'vieRod',
+  vineyardYoung: 'vieNerod',
+  orchardBearing: 'livadaRod',
+  orchardYoung: 'livadaNerod',
+  forestYoung: 'padurePana20',
+  forestOld: 'padurePeste20',
+  waterFishFarm: 'apeAmenajare',
+  water: 'apeFaraAmenajare',
+  roadsFree: 'drumuriLiber',
+  roadsOccupied: 'drumuriOcup',
+  unproductive: 'neproductive',
+}
+
+/** Адрес объекта одной строкой: «Șos. Mihai Bravu nr. 200, București». */
+export const propertyAddressLine = (p: Pick<Property, 'address'>) => {
+  const { street, number, locality } = p.address
+  return [number ? `${street} nr. ${number}` : street, locality].filter(Boolean).join(', ')
+}
 
 /**
- * Данные для шаблона src/typst/itl004.typ: всё уже строками в печатном виде.
- * Форма данных — как в src/typst/samples/itl004.json.
+ * Данные для шаблона src/typst/itl004.typ — одна декларация на землю под всеми
+ * объектами досье, по пункту и строке таблицы на объект; всё уже строками в печатном
+ * виде. Форма данных — как в src/typst/samples/itl004.json.
  */
-export function toPrintData(d: Declaration) {
-  const { reprezentant: r, contribuabil: c } = d
-  const domiciliu = splitSector(r.domiciliu.judet)
-  const sediu = splitSector(c.sediu.judet)
-  const { strada, nr, bloc, scara, etaj, apartament, codPostal, localitate } = r.domiciliu
+export function toPrintData(d: Dossier) {
+  const { signatory: s, company: c } = d
+  const domiciliu = splitSector(s.address.county)
+  const sediu = splitSector(c.seat.county)
+  const { street, number, block, entrance, floor, apartment, postalCode, locality } = s.address
 
   return {
-    rolNominal: d.antet.rolNominal,
+    rolNominal: c.taxRoll,
     reprezentant: {
-      nume: r.nume,
-      actTip: d.actIdentitate.tip,
-      serie: d.actIdentitate.serie,
-      numar: d.actIdentitate.numar,
-      cnp: r.cnp,
-      tara: r.domiciliu.tara,
+      nume: fullName(s),
+      actTip: s.idDocument.type,
+      serie: s.idDocument.series,
+      numar: s.idDocument.number,
+      cnp: s.personalId,
+      tara: s.address.country,
       ...domiciliu,
-      codPostal,
-      localitate,
-      strada,
-      nr,
-      bloc,
-      scara,
-      etaj,
-      apartament,
+      codPostal: postalCode,
+      localitate: locality,
+      strada: street,
+      nr: number,
+      bloc: block,
+      scara: entrance,
+      etaj: floor,
+      apartament: apartment,
     },
     contribuabil: {
-      denumire: c.denumire,
-      cif: c.cui,
+      denumire: c.name,
+      cif: c.taxId,
       ...sediu,
-      localitate: c.sediu.localitate,
-      codPostal: c.sediu.codPostal,
-      strada: c.sediu.strada,
-      nr: c.sediu.nr,
-      bloc: c.sediu.bloc,
-      scara: c.sediu.scara,
-      etaj: c.sediu.etaj,
-      apartament: c.sediu.apartament,
-      telefon: c.telefon,
+      localitate: c.seat.locality,
+      codPostal: c.seat.postalCode,
+      strada: c.seat.street,
+      nr: c.seat.number,
+      bloc: c.seat.block,
+      scara: c.seat.entrance,
+      etaj: c.seat.floor,
+      apartament: c.seat.apartment,
+      telefon: c.phone,
       fax: c.fax,
       email: c.email,
-      registruComertului: c.registruComertului,
-      nrRegistruComertului: c.nrRegistruComertului,
-      iban: formatIban(c.iban),
-      banca: c.banca,
+      registruComertului: c.tradeRegister.office,
+      nrRegistruComertului: c.tradeRegister.number,
+      iban: formatIban(c.bank.iban),
+      banca: c.bank.name,
     },
-    terenuri: d.terenuri.map((t) => ({
-      dataDobandirii: formatDate(t.dataDobandirii),
-      nrAct: t.nrAct,
-      dataAct: formatDate(t.dataAct),
-      forma: LAND_ACQUISITION_TEXT[t.forma],
-      localitate: t.localitate,
-      sector: t.satSector,
-      strada: t.strada,
-      nr: t.nr,
-      registruPerioada: t.registru.perioada,
-      registruTip: t.registru.tip,
-      registruVolum: t.registru.volum,
-      registruPozitie: t.registru.pozitie,
-      cota: t.cota,
-      coproprietari: t.coproprietari,
-      parcela: t.parcela || [t.nr ? `${t.strada} nr. ${t.nr}` : t.strada, t.localitate].join(', '),
-      intravilan: t.intravilan,
-      suprafete: Object.fromEntries(LAND_CATEGORIES.map((k) => [k, formatArea(t.suprafete[k])])),
-      rang: t.rang,
-      zona: t.zona,
-    })),
-    scutire: d.scutire,
-    comunicareEmail: c.comunicareEmail === 'da',
-    anexe: d.anexe,
-    data: formatDate(d.dataDeclaratiei),
-    director: d.semnatari.director,
-    sefContabil: d.semnatari.sefContabil,
+    // Все объекты, даже если их больше пяти пунктов бланка.
+    terenuri: d.properties.map((p) => {
+      const deed = deedOf(d, p)
+      const { land } = p
+      return {
+        dataDobandirii: formatDate(acquiredOn(deed)),
+        nrAct: deed.number,
+        dataAct: formatDate(deed.date),
+        forma: deed.form === 'other' ? deed.formOther : FORM[deed.form],
+        localitate: p.address.locality,
+        sector: sectorNumber(p.address.district) ?? p.address.district,
+        strada: p.address.street,
+        nr: p.address.number,
+        registruPerioada: p.agriculturalRegister.period,
+        registruTip: p.agriculturalRegister.type,
+        registruVolum: p.agriculturalRegister.volume,
+        registruPozitie: p.agriculturalRegister.position,
+        cota: land.share,
+        coproprietari: land.coOwners,
+        parcela: land.parcel || propertyAddressLine(p),
+        intravilan: land.zoning,
+        suprafete: Object.fromEntries(LAND_CATEGORIES.map((k) => [CATEGORY[k], formatArea(land.areas[k])])),
+        rang: land.rank,
+        zona: land.zone,
+      }
+    }),
+    scutire: { cota: d.exemption.share, calitate: d.exemption.capacity, documente: d.exemption.documents },
+    comunicareEmail: c.emailOnly === 'yes',
+    anexe: attachmentsOf(d.attachments, ...d.deeds.map((deed) => deed.attachments), ...d.properties.map((p) => p.attachments)),
+    data: formatDate(d.declarationDate),
+    // Директор по умолчанию — подписант.
+    director: d.director || fullName(s),
+    sefContabil: d.chiefAccountant,
   }
 }

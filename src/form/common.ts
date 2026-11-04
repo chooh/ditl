@@ -4,7 +4,7 @@ import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeRomanian, pa
 // Стандартные сообщения Zod — на румынском.
 z.config(z.locales.ro())
 
-/** Общие кирпичики схем деклараций ITL 002 и ITL 004. */
+/** Общие кирпичики схемы досье. */
 
 export const REQUIRED = 'Câmp obligatoriu'
 
@@ -13,9 +13,24 @@ export const text = (max: number) => z.string().transform(normalizeRomanian).pip
 export const requiredText = (max: number) =>
   z.string().transform(normalizeRomanian).pipe(z.string().trim().min(1, REQUIRED).max(max))
 
+/** Дата как в <input type="date">: «2024-01-31». */
 export const date = z.iso.date('Introduceți data')
 export const optionalDate = z.union([z.literal(''), date])
 export const pastDate = date.refine((d) => d <= todayIso(), 'Data nu poate fi în viitor')
+
+/** «2024-01-31» → Date, локальная полночь (new Date(iso) дал бы полночь UTC). */
+export function toDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y!, m! - 1, d!)
+}
+
+/** Date → «2024-01-31» по местному времени. */
+export function isoDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+export const todayIso = () => isoDate(new Date())
 
 export const email = z
   .string()
@@ -68,100 +83,58 @@ export const iban = z
   .transform((s) => s.replace(/\s/g, '').toUpperCase())
   .refine((s) => s === '' || isValidIban(s), 'IBAN invalid')
 
-/** Все поля адреса; какие из них есть в конкретном разделе бланка — решает форма и шаблон. */
+/** Почтовый адрес: все поля; какие из них показывать — решает форма. */
 export const address = z.object({
-  strada: text(80),
-  nr: text(10),
-  codPostal: text(10),
-  bloc: text(10),
-  scara: text(10),
-  etaj: text(5),
-  apartament: text(10),
-  localitate: text(60),
-  judet: text(40),
-  tara: text(40),
+  street: text(80), // strada
+  number: text(10), // nr.
+  postalCode: text(10), // cod poștal
+  block: text(10), // bloc
+  entrance: text(10), // scara
+  floor: text(5), // etaj
+  apartment: text(10), // apartament
+  locality: text(60), // localitatea
+  county: text(40), // județul / sectorul
+  country: text(40), // țara
 })
 export type Address = z.output<typeof address>
 export type AddressInput = z.input<typeof address>
 
-export const emptyAddress = (tara = ''): AddressInput => ({
-  strada: '',
-  nr: '',
-  codPostal: '',
-  bloc: '',
-  scara: '',
-  etaj: '',
-  apartament: '',
-  localitate: '',
-  judet: '',
-  tara,
+export const emptyAddress = (country = ''): AddressInput => ({
+  street: '',
+  number: '',
+  postalCode: '',
+  block: '',
+  entrance: '',
+  floor: '',
+  apartment: '',
+  locality: '',
+  county: '',
+  country,
 })
 
-/**
- * Реквизиты юрлица, одинаковые в ITL 002 и ITL 004: при «той же фирме» они
- * переносятся в новую декларацию любого типа.
- */
-export const taxpayerShape = {
-  denumire: requiredText(150),
-  cui,
-  telefon: phone,
-  email,
-  sediu: address,
-  comunicareEmail: choice(['da', 'nu'] as const, 'Alegeți DA sau NU'),
-}
+/** На бланке ITL 002 — девять строк приложений; столько же разрешаем в каждом списке. */
+export const MAX_ATTACHMENTS = 9
 
-export const emptyTaxpayer = () => ({
-  denumire: '',
-  cui: '',
-  telefon: '',
-  email: '',
-  sediu: emptyAddress('România'),
-  comunicareEmail: '',
-})
+/** Приложения (anexe): в форме — строки списка, в данных — только непустые названия. */
+export const attachments = z
+  .array(z.object({ name: text(70) }))
+  .max(MAX_ATTACHMENTS)
+  .transform((list) => list.map((a) => a.name).filter(Boolean))
 
-/** Документ, удостоверяющий личность подписанта. */
-export const identityShape = {
-  tip: requiredText(15),
-  serie: text(6),
-  numar: requiredText(12),
-}
-
-export const MAX_ANNEXES = 9
-
-export const annexes = z
-  .array(z.object({ denumire: text(70) }))
-  .max(MAX_ANNEXES)
-  .transform((list) => list.map((a) => a.denumire).filter(Boolean))
+export const emptyAttachments = () => [{ name: '' }]
 
 type Path = (string | number)[]
 
-/** Межполевые проверки, общие для деклараций. */
+/** Межполевые проверки. */
 export function checks(ctx: z.RefinementCtx) {
   const require = (value: string, path: Path) => {
     if (!value) ctx.addIssue({ code: 'custom', message: REQUIRED, path })
   }
-  const checkPostalCode = (a: Address, path: Path, country = a.tara) => {
+  const checkPostalCode = (a: Address, path: Path, country = a.country) => {
     const romanian = !country || looseEquals(country, 'România')
-    if (a.codPostal && romanian && !/^\d{6}$/.test(a.codPostal)) {
-      ctx.addIssue({ code: 'custom', message: 'Codul poștal are 6 cifre', path: [...path, 'codPostal'] })
+    if (a.postalCode && romanian && !/^\d{6}$/.test(a.postalCode)) {
+      ctx.addIssue({ code: 'custom', message: 'Codul poștal are 6 cifre', path: [...path, 'postalCode'] })
     }
   }
-  /** Обязательные поля юрлица: адрес и e-mail при согласии на электронную переписку. */
-  const checkTaxpayer = (c: { sediu: Address; email: string; comunicareEmail: string }) => {
-    require(c.sediu.strada, ['contribuabil', 'sediu', 'strada'])
-    require(c.sediu.nr, ['contribuabil', 'sediu', 'nr'])
-    require(c.sediu.localitate, ['contribuabil', 'sediu', 'localitate'])
-    require(c.sediu.judet, ['contribuabil', 'sediu', 'judet'])
-    checkPostalCode(c.sediu, ['contribuabil', 'sediu'])
-    if (c.comunicareEmail === 'da' && !c.email) {
-      ctx.addIssue({ code: 'custom', message: 'Necesară pentru comunicarea prin e-mail', path: ['contribuabil', 'email'] })
-    }
-  }
-  return { require, checkPostalCode, checkTaxpayer }
-}
-
-export function todayIso(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return { require, checkPostalCode }
 }

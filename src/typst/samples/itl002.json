@@ -8,7 +8,7 @@
   "contribuabil": {
     "denumire": "Exemplu Construcții Țărănești S.R.L.",
     "cui": "18547290",
-    "telefon": "021 123 45 67",
+    "telefon": "021 123 45 67 / 021 123 45 68",
     "email": "contabilitate@exemplu.ro",
     "sediu": {
       "strada": "Bd. Ștefan cel Mare",
@@ -22,7 +22,6 @@
       "judet": "Sector 2",
       "tara": "România"
     },
-    "comunicareEmail": "da",
     "corespondenta": {
       "strada": "Str. Viitorului",
       "nr": "7",
@@ -34,7 +33,8 @@
       "localitate": "București",
       "judet": "",
       "tara": ""
-    }
+    },
+    "comunicareEmail": "da"
   },
   "imputernicit": {
     "nume": "Popescu",
@@ -66,14 +66,11 @@
     "adresa": {
       "strada": "Șos. Mihai Bravu",
       "nr": "200",
-      "codPostal": "",
       "bloc": "P1",
       "scara": "B",
       "etaj": "5",
       "apartament": "18",
-      "localitate": "Sector 2",
-      "judet": "",
-      "tara": ""
+      "localitate": "București, Sector 2"
     },
     "indicatori": {
       "a": {
@@ -129,15 +126,13 @@
     }
   },
   "anexe": [
+    "Certificat de înregistrare ONRC",
+    "Împuternicire notarială",
+    "Copie act de identitate împuternicit",
     "Contract de vânzare-cumpărare nr. 1234/2023",
     "Încheiere de intabulare",
-    "Extras de carte funciară",
-    "Raport de evaluare nr. 56/2025",
-    "Certificat de înregistrare ONRC",
-    "Proces-verbal de recepție",
-    "Balanța de verificare la 31.12.2025",
-    "Împuternicire notarială",
-    "Copie act de identitate împuternicit"
+    "Extras de carte funciară nr. 212345-C1-U18",
+    "Raport de evaluare nr. 56/2025"
   ],
   "actIdentitate": {
     "tip": "CI",
