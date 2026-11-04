@@ -47,6 +47,13 @@ main.wide {
   color: var(--muted);
 }
 
+footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
 /* ── Сворачиваемые разделы ── */
 .section {
   border: 1px solid var(--border);

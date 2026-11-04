@@ -75,6 +75,13 @@ function Editor({ session, onSwitch }: EditorProps) {
           <DossierForm session={session} onSwitch={onSwitch} hidden={!!docs} onValid={onValid} error={error} setError={setError} />
         </SectionsProvider>
       </FormProvider>
+
+      {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии,
+          а сборка раздаёт их файлами (src/typst/compiler.ts). */}
+      <footer className="note">
+        Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
+        <a href="LICENSE-Liberation.txt">SIL Open Font License 1.1</a>.
+      </footer>
     </main>
   )
 }

@@ -56,6 +56,9 @@ src/
   output/Result.tsx     экран результата: список .typ, кнопка загрузки компилятора, выбор документа для PDF
   output/PdfView.tsx    ленивый чанк: компилятор Typst, предпросмотр и «Descarcă PDF»
   assets/fonts/         Liberation Sans/Serif (OFL), метрически совместимы с Arial/Times бланков
+
+public/
+  LICENSE-Liberation.txt  текст OFL 1.1; Vite кладёт его в корень dist/ (см. «Лицензия шрифтов»)
 ```
 
 ### Шаблоны Typst
@@ -74,8 +77,12 @@ src/typst/
 форматирование — в `print.ts` на стороне TS. Чтобы править шаблон с живым предпросмотром:
 
 ```sh
-typst watch --font-path src/assets/fonts src/typst/itl004.typ
+typst watch src/typst/itl004.typ
 ```
+
+Шрифты в dev-шелле подхватываются из `TYPST_FONT_PATHS` (задан в `flake.nix`): macOS
+не поставляет Liberation, и без этого typst CLI молча откатывается на Times New Roman,
+то есть даёт не тот же результат, что браузер. Вне шелла — `--font-path src/assets/fonts`.
 
 Без `--input data=…` шаблон берёт `samples/itl004.json`. Тест проверяет, что эти JSON
 совпадают с тем, что печатает приложение, — после изменения `print.ts` или тестовых
@@ -167,6 +174,21 @@ typst.ts 0.7.0 (внутри Typst 0.14) закреплён точной вер�
   бланка: «Sector 2» → județ București, sector 2.
 - Приложения: в ITL 002 объекта — общие, его акта и его самого; в ITL 004 — все;
   повторы убираются.
+
+## Лицензия шрифтов
+
+Liberation Sans/Serif 2.1.5 — © 2012 Red Hat, Inc. под [SIL Open Font License 1.1]
+(полный текст: `public/LICENSE-Liberation.txt`, FAQ: <https://openfontlicense.org>).
+
+Сборка раздаёт сами `.ttf` (`src/typst/compiler.ts` импортирует их через `?url`), а OFL
+требует прикладывать к каждой распространяемой копии шрифта копирайт и текст лицензии —
+поэтому лицензия лежит в `public/` и на неё ссылается футер страницы. При добавлении или
+замене шрифтов это условие нужно выполнить заново.
+
+На сгенерированные PDF лицензия не распространяется: OFL прямо исключает документы,
+созданные с помощью шрифта. Встраивание шрифта в PDF разрешено.
+
+[SIL Open Font License 1.1]: https://openfontlicense.org
 
 ## Деплой на GitHub Pages
 
