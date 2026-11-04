@@ -5,9 +5,26 @@ export function formatDate(iso: string): string {
   return `${d}.${m}.${y}`
 }
 
-const money = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const decimal = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /** 1234567.8 → 1.234.567,80 */
 export function formatMoney(value: number | null): string {
-  return value === null ? '' : money.format(value)
+  return value === null ? '' : decimal.format(value)
+}
+
+/** Площадь в м² — в том же виде, что и суммы. */
+export const formatArea = formatMoney
+
+/** RO49AAAA1B31007593840000 → RO49 AAAA 1B31 0075 9384 0000 */
+export function formatIban(iban: string): string {
+  return iban.replace(/(.{4})(?=.)/g, '$1 ')
+}
+
+/**
+ * Поле «Județul/Sectorul» адреса → отдельные «județ» и «sector», как в тексте ITL 004:
+ * «Sector 2» → județ București, sector 2; «Ilfov» → județ Ilfov, сектора нет.
+ */
+export function splitSector(judetSector: string): { judet: string; sector: string } {
+  const m = /^sector(?:ul)?\s*(\d)$/i.exec(judetSector.trim())
+  return m ? { judet: 'București', sector: m[1]! } : { judet: judetSector, sector: '' }
 }

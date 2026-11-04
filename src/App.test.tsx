@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { STORAGE_KEY } from './drafts/storage'
 import { App } from './App'
 
 beforeAll(() => {
@@ -76,7 +77,7 @@ describe('сворачиваемые разделы', () => {
     await user.click(screen.getByRole('button', { name: /IV\. Datele clădirii/ }))
     expect(isOpen(/IV\. Datele clădirii/)).toBe(false)
 
-    await user.click(screen.getByRole('button', { name: 'Previzualizare' }))
+    await user.click(screen.getByRole('button', { name: 'Generează documentul' }))
 
     expect(isOpen(/IV\. Datele clădirii/)).toBe(true)
     expect(document.activeElement).toBe(screen.getByLabelText('Localitate/sector'))
@@ -121,7 +122,7 @@ describe('черновики', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.type(screen.getByLabelText('Denumire contribuabil'), 'Prima SRL')
-    await user.click(screen.getByRole('button', { name: 'Declarație nouă' }))
+    await user.click(screen.getByRole('button', { name: 'Declarație nouă: ITL 002 — clădire' }))
     expect((screen.getByLabelText('Denumire contribuabil') as HTMLInputElement).value).toBe('')
 
     await user.type(screen.getByLabelText('Denumire contribuabil'), 'A doua SRL')
@@ -137,7 +138,7 @@ describe('черновики', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
-    await user.click(screen.getByRole('button', { name: 'Altă clădire, același contribuabil' }))
+    await user.click(screen.getByRole('button', { name: 'Același contribuabil: ITL 002 — altă clădire' }))
 
     expect(screen.getByRole('button', { name: 'Ciornele mele (2)' })).toBeTruthy()
     expect(isOpen(/I\. Date de identificare a contribuabilului/)).toBe(false)
@@ -157,5 +158,61 @@ describe('черновики', () => {
     expect((screen.getByLabelText('Denumire contribuabil') as HTMLInputElement).value).toBe('')
     reload()
     expect(screen.getByRole('button', { name: 'Ciornele mele (0)' })).toHaveProperty('disabled', true)
+  })
+})
+
+describe('ITL 004', () => {
+  const heading = () => screen.getByRole('heading', { level: 1 }).textContent
+
+  it('та же фирма: реквизиты переносятся из ITL 002 в ITL 004, участков ещё нет', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
+    await user.click(screen.getByRole('button', { name: 'Același contribuabil: ITL 004 — teren' }))
+
+    expect(heading()).toBe('Declarație fiscală ITL 004')
+    expect(screen.getByRole('button', { name: 'Ciornele mele (2)' })).toBeTruthy()
+    expect(isOpen(/Contribuabilul \(persoana juridică\)/)).toBe(false)
+    expect(isOpen(/Terenurile/)).toBe(true)
+    expect((screen.getByLabelText('Prin actul nr.') as HTMLInputElement).value).toBe('')
+
+    // Черновик ITL 002 открывается из списка — форма переключается обратно.
+    await user.click(screen.getByRole('button', { name: 'Ciornele mele (2)' }))
+    await user.click(screen.getAllByRole('button', { name: /^Deschide ciorna/ })[0]!)
+    expect(heading()).toBe('Declarație fiscală ITL 002')
+  })
+
+  it('пустая ITL 004 по кнопке; после перезагрузки открывается она же', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Declarație nouă: ITL 004 — teren' }))
+    await user.type(screen.getByLabelText('Prenumele și numele'), 'Ion Popescu')
+    cleanup()
+    render(<App />)
+
+    expect(heading()).toBe('Declarație fiscală ITL 004')
+    expect((screen.getByLabelText('Prenumele și numele') as HTMLInputElement).value).toBe('Ion Popescu')
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).drafts[0].form).toBe('itl004')
+  })
+
+  it('готовая декларация: .typ скачивается сразу, компилятор — только по кнопке', async () => {
+    const blobs: Blob[] = []
+    URL.createObjectURL = (b: Blob) => (blobs.push(b), 'blob:test')
+    URL.revokeObjectURL = () => {}
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Declarație nouă: ITL 004 — teren' }))
+    await user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
+    await user.click(screen.getByRole('button', { name: 'Generează documentul' }))
+
+    await screen.findByRole('heading', { name: 'Documentul este gata' })
+    expect(screen.getByText('typst compile ITL004_18547290.typ')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Încarcă compilatorul și generează PDF-ul' })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Descarcă .typ' }))
+    const source = await blobs.at(-1)!.text()
+    expect(source).toMatch(/^\/\/ Declarație fiscală ITL 004/)
+    expect(source).toContain('denumire: "Exemplu Construcții Țărănești S.R.L."')
   })
 })

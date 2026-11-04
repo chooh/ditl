@@ -26,6 +26,15 @@ export function isValidCnp(digits: string): boolean {
   return check === Number(digits[12])
 }
 
+/** IBAN без пробелов, заглавными: страна, контрольные цифры (mod 97), счёт; румынский — 24 знака. */
+export function isValidIban(iban: string): boolean {
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false
+  if (iban.startsWith('RO') && iban.length !== 24) return false
+  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55))
+  // Остаток по частям: число слишком длинное для Number.
+  return [...digits].reduce((rem, d) => (rem * 10 + Number(d)) % 97, 0) === 1
+}
+
 /** «RO 123 456 78» → «12345678». */
 export function stripCui(s: string): string {
   return s.replace(/^\s*RO/i, '').replace(/[\s.-]/g, '')

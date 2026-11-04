@@ -1,4 +1,5 @@
-import { emptyDeclaration, todayIso, type DeclarationInput } from './schema'
+import { todayIso } from '../form/common'
+import { emptyDeclaration, type DeclarationInput } from './schema'
 
 /**
  * Вымышленные данные, заполняющие все поля бланка, — чтобы посмотреть, как выглядит

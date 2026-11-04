@@ -1,4 +1,4 @@
-import { emptyDeclaration, type DeclarationInput } from '../form/schema'
+import { emptyDeclaration, type DeclarationInput } from '../itl002/schema'
 
 const base = emptyDeclaration()
 

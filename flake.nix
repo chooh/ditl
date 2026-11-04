@@ -1,5 +1,5 @@
 {
-  description = "ditl — заполнение PDF-формы в браузере";
+  description = "ditl — декларации ITL 002 / ITL 004 в браузере";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -11,7 +11,8 @@
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ pkgs.nodejs_24 ];
+          # typst — чтобы править шаблоны и собирать скачанные .typ локально.
+          packages = [ pkgs.nodejs_24 pkgs.typst ];
         };
       });
     };

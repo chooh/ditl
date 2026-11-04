@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validInput } from '../test/fixtures'
+import { validInput } from '../test/itl002'
 import { declarationSchema, emptyDeclaration } from './schema'
 
 const issuePaths = (input: unknown) => {

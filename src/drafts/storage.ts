@@ -1,18 +1,22 @@
-import { emptyDeclaration, type DeclarationInput } from '../form/schema'
+import { FORMS, type FormId } from '../forms'
+import { withDefaults } from '../form/withDefaults'
 
 /**
- * Черновики в localStorage. Одна декларация ITL 002 — одно здание, поэтому у фирмы
- * с несколькими зданиями черновиков несколько. Всё хранится под одним ключом и
- * перечитывается перед каждой записью: две вкладки, правящие разные черновики,
- * не затирают друг друга.
+ * Черновики в localStorage. Одна декларация — одно здание (ITL 002) или участки
+ * (ITL 004), поэтому у фирмы черновиков обычно несколько. Всё хранится под одним
+ * ключом и перечитывается перед каждой записью: две вкладки, правящие разные
+ * черновики, не затирают друг друга.
  */
 const KEY = 'ditl.drafts.v1'
 
 export type Draft = {
   id: string
+  /** Тип декларации; у черновиков, сохранённых до ITL 004, его нет — это ITL 002. */
+  form: FormId
   /** Время последнего сохранения, мс. */
   updatedAt: number
-  values: DeclarationInput
+  /** Значения формы этого типа. */
+  values: Record<string, unknown>
 }
 
 type Store = {
@@ -29,7 +33,10 @@ function read(): Store {
     if (!raw || !Array.isArray(raw.drafts)) return { drafts: [] }
     const drafts = raw.drafts
       .filter((d): d is Draft => !!d && typeof d.id === 'string' && typeof d.updatedAt === 'number')
-      .map((d) => ({ ...d, values: withDefaults(emptyDeclaration(), d.values) }))
+      .map((d) => {
+        const form: FormId = d.form in FORMS ? d.form : 'itl002'
+        return { ...d, form, values: withDefaults(FORMS[form].empty(), d.values) }
+      })
     return { activeId: typeof raw.activeId === 'string' ? raw.activeId : undefined, drafts }
   } catch {
     // Повреждённые данные или запрещённый доступ к хранилищу — начинаем с чистого листа.
@@ -70,9 +77,9 @@ export function setActiveDraft(id: string | undefined) {
 }
 
 /** Сохранить значения формы; без `id` создаётся новый черновик. Черновик становится активным. */
-export function saveDraft(id: string | undefined, values: DeclarationInput): Draft {
+export function saveDraft(id: string | undefined, form: FormId, values: Record<string, unknown>): Draft {
   const store = read()
-  const draft: Draft = { id: id ?? newId(), updatedAt: Date.now(), values }
+  const draft: Draft = { id: id ?? newId(), form, updatedAt: Date.now(), values }
   write({ activeId: draft.id, drafts: [...store.drafts.filter((d) => d.id !== draft.id), draft] })
   return draft
 }
@@ -86,31 +93,14 @@ export function deleteDraft(id: string) {
 }
 
 /** Пустая форма: ничего, кроме значений по умолчанию (дата декларации не в счёт). */
-export function isBlank(values: DeclarationInput): boolean {
-  const comparable = (v: DeclarationInput) => JSON.stringify({ ...v, dataDeclaratiei: '' })
-  return comparable(values) === comparable(emptyDeclaration())
+export function isBlank(form: FormId, values: Record<string, unknown>): boolean {
+  const comparable = (v: Record<string, unknown>) => JSON.stringify({ ...v, dataDeclaratiei: '' })
+  return comparable(values) === comparable(FORMS[form].empty())
 }
 
-/** Название черновика: контрибуабил и адрес здания. */
-export function draftTitle({ contribuabil: c, cladire: b }: DeclarationInput): string {
-  const building = [`${b.adresa.strada} ${b.adresa.nr}`.trim(), b.adresa.localitate].filter(Boolean).join(', ')
-  return [c.denumire.trim() || 'Contribuabil necompletat', building].filter(Boolean).join(' · ')
-}
-
-/**
- * Привести сохранённые значения к текущей форме: после обновления схемы новые поля
- * получают значения по умолчанию, исчезнувшие и неверного типа — отбрасываются.
- */
-export function withDefaults<T>(defaults: T, stored: unknown): T {
-  if (Array.isArray(defaults)) {
-    return (Array.isArray(stored) ? stored.map((item) => withDefaults(defaults[0], item)) : defaults) as T
-  }
-  if (defaults !== null && typeof defaults === 'object') {
-    if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) return defaults
-    const source = stored as Record<string, unknown>
-    return Object.fromEntries(Object.entries(defaults).map(([k, v]) => [k, withDefaults(v, source[k])])) as T
-  }
-  return typeof stored === typeof defaults ? (stored as T) : defaults
+/** Название черновика: контрибуабил и объект декларации (здание, участки). */
+export function draftTitle({ form, values }: Pick<Draft, 'form' | 'values'>): string {
+  return FORMS[form].draftTitle(values)
 }
 
 function newId(): string {

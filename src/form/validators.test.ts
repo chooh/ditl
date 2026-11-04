@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isValidCnp, isValidCui, looseEquals, normalizeRomanian, parseMoney, stripCui } from './validators'
+import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeRomanian, parseMoney, stripCui } from './validators'
 
 describe('isValidCui', () => {
   it('принимает корректные CUI', () => {
@@ -13,6 +13,17 @@ describe('isValidCui', () => {
 describe('isValidCnp', () => {
   it('принимает корректный CNP', () => expect(isValidCnp('1800101221144')).toBe(true))
   it('отклоняет неверную контрольную цифру', () => expect(isValidCnp('1800101221145')).toBe(false))
+})
+
+describe('isValidIban', () => {
+  it('принимает корректные IBAN', () => {
+    expect(isValidIban('RO49AAAA1B31007593840000')).toBe(true)
+    expect(isValidIban('DE89370400440532013000')).toBe(true)
+  })
+  it('отклоняет неверные контрольные цифры и длину', () => {
+    expect(isValidIban('RO48AAAA1B31007593840000')).toBe(false)
+    expect(isValidIban('RO49AAAA1B3100759384000')).toBe(false)
+  })
 })
 
 describe('parseMoney', () => {

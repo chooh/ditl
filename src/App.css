@@ -163,10 +163,6 @@ textarea {
   margin: 8px 0;
 }
 
-.debug {
-  color: var(--muted);
-}
-
 .error {
   color: var(--error);
   font-size: 0.875rem;
@@ -307,6 +303,13 @@ input[aria-invalid='true'] {
 
 .drafts .actions {
   align-items: center;
+  margin-top: 8px;
+}
+
+.actions-label {
+  min-width: 11em;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .drafts .actions button {
@@ -347,4 +350,68 @@ input[aria-invalid='true'] {
 .draft-current {
   color: var(--muted);
   font-size: 0.875rem;
+}
+
+.draft-form {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ── ITL 004: участки ── */
+.parcel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px 12px;
+}
+
+.parcel legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.parcel button.link {
+  margin-top: 4px;
+}
+
+.categories {
+  margin: 0 0 12px;
+}
+
+.categories summary {
+  cursor: pointer;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+/* ── Результат ── */
+.preview code {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.preview h3 {
+  margin-top: 24px;
+}
+
+.preview > .actions button,
+.preview > button {
+  margin-top: 8px;
+}
+
+.pdf-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.diagnostics {
+  flex-basis: 100%;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }

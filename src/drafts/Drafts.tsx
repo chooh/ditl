@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFormContext } from 'react-hook-form'
-import { emptyDeclaration, type DeclarationInput } from '../form/schema'
+import { FORM_IDS, FORMS, forSameTaxpayer, type FormId } from '../forms'
 import { useSections } from '../form/sections'
-import {
-  deleteDraft,
-  draftTitle,
-  isBlank,
-  listDrafts,
-  loadDraft,
-  saveDraft,
-  setActiveDraft,
-  STORAGE_KEY,
-  type Draft,
-} from './storage'
+import { deleteDraft, draftTitle, isBlank, listDrafts, loadDraft, saveDraft, setActiveDraft, STORAGE_KEY, type Draft } from './storage'
 
 /** Пауза в наборе, после которой черновик записывается. */
 const SAVE_DELAY = 500
 
 type Status = { savedAt?: number; failed?: boolean }
+
+/**
+ * Что открыть в форме. Любая смена — другой черновик, новая декларация, другой тип —
+ * пересоздаёт форму с этими значениями (см. App).
+ */
+export type Session = {
+  form: FormId
+  /** Открытый черновик. */
+  draft?: Draft
+  /** Значения новой декларации без черновика (например, данные той же фирмы); сразу сохраняются. */
+  initial?: Record<string, unknown>
+}
 
 export type DraftsApi = ReturnType<typeof useDrafts>
 
@@ -26,38 +28,37 @@ export type DraftsApi = ReturnType<typeof useDrafts>
  * а не при открытии пустой формы; несохранённые изменения дописываются при
  * переключении черновика, уходе со страницы и размонтировании.
  */
-export function useDrafts(restored: Draft | undefined, onLoad: () => void) {
-  const { getValues, reset, watch, formState } = useFormContext<DeclarationInput>()
+export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
+  const { form } = session
+  const { getValues, watch, formState } = useFormContext<Record<string, unknown>>()
   const sections = useSections()
   const [list, setList] = useState(listDrafts)
-  const [activeId, setActiveId] = useState(restored?.id)
-  const [status, setStatus] = useState<Status>({ savedAt: restored?.updatedAt })
-  const active = useRef(restored?.id)
-  const lastSaved = useRef(restored && JSON.stringify(restored.values))
+  const [activeId, setActiveId] = useState(session.draft?.id)
+  const [status, setStatus] = useState<Status>({ savedAt: session.draft?.updatedAt })
+  const active = useRef(session.draft?.id)
+  const lastSaved = useRef(session.draft && JSON.stringify(session.draft.values))
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  const activate = useCallback((id: string | undefined) => {
-    active.current = id
-    setActiveId(id)
-  }, [])
+  /** Открытый черновик удалён: форма вот-вот пересоздастся, сохранять больше нечего. */
+  const detached = useRef(false)
 
   const flush = useCallback(() => {
     clearTimeout(timer.current)
     timer.current = undefined
     const values = getValues()
     const json = JSON.stringify(values)
-    if (json === lastSaved.current || (!active.current && isBlank(values))) return
+    if (detached.current || json === lastSaved.current || (!active.current && isBlank(form, values))) return
     try {
-      const draft = saveDraft(active.current, values)
+      const draft = saveDraft(active.current, form, values)
       lastSaved.current = json
-      activate(draft.id)
+      active.current = draft.id
+      setActiveId(draft.id)
       setStatus({ savedAt: draft.updatedAt })
     } catch (e) {
       console.error(e)
       setStatus({ failed: true })
     }
     setList(listDrafts())
-  }, [getValues, activate])
+  }, [getValues, form])
 
   useEffect(() => {
     const subscription = watch(() => {
@@ -79,59 +80,49 @@ export function useDrafts(restored: Draft | undefined, onLoad: () => void) {
     }
   }, [watch, flush])
 
-  // Восстановленный черновик показываем так же, как открытый из списка.
+  // Открытый черновик или перенесённые данные: готовые разделы свёрнуты, новые данные сразу сохранены.
   useLayoutEffect(() => {
-    if (restored) sections.collapseCompleted(restored.values)
+    const loaded = session.draft?.values ?? session.initial
+    if (loaded && !isBlank(form, loaded)) sections.collapseCompleted(loaded)
+    if (session.initial) flush()
   }, []) // только при монтировании
-
-  /** Показать в форме значения; `draft` — черновик, из которого они взяты. */
-  const load = (values: DeclarationInput, draft?: Draft) => {
-    reset(values)
-    clearTimeout(timer.current)
-    activate(draft?.id)
-    lastSaved.current = draft && JSON.stringify(values)
-    setStatus({ savedAt: draft?.updatedAt })
-    if (isBlank(values)) sections.setAll(true, { forget: true })
-    else sections.collapseCompleted(values)
-    onLoad()
-  }
 
   const open = (id: string) => {
     flush()
     const draft = loadDraft(id)
     if (!draft) return setList(listDrafts())
     setActiveDraft(id)
-    load(draft.values, draft)
+    onSwitch({ form: draft.form, draft })
   }
 
-  /** Новая декларация; непустые `values` (тестовые данные, «та же фирма») сразу становятся черновиком. */
-  const startNew = (values = emptyDeclaration()) => {
+  /** Новая декларация типа `to`; `initial` — значения, с которых она начинается. */
+  const startNew = (to: FormId, initial?: Record<string, unknown>) => {
     flush()
     setActiveDraft(undefined)
-    load(values)
-    flush()
+    onSwitch({ form: to, initial })
   }
 
-  /** Следующая декларация той же фирмы: всё, кроме данных о здании и приложений. */
-  const startForAnotherBuilding = () => {
-    const { contribuabil, imputernicit, adresaStrainatate, actIdentitate } = structuredClone(getValues())
-    startNew({ ...emptyDeclaration(), contribuabil, imputernicit, adresaStrainatate, actIdentitate })
-  }
+  /** Следующая декларация той же фирмы: реквизиты и подписант переносятся, объект декларации — нет. */
+  const startForSameTaxpayer = (to: FormId) => startNew(to, forSameTaxpayer(form, structuredClone(getValues()), to) as Record<string, unknown>)
 
   const remove = (id: string) => {
     const draft = list.find((d) => d.id === id)
-    if (!draft || !window.confirm(`Ștergeți ciorna „${draftTitle(draft.values)}”? Acțiunea nu poate fi anulată.`)) return
+    if (!draft || !window.confirm(`Ștergeți ciorna „${draftTitle(draft)}”? Acțiunea nu poate fi anulată.`)) return
     try {
       deleteDraft(id)
     } catch (e) {
       console.error(e)
     }
-    // Удалили открытый черновик — форма очищается, иначе автосохранение создало бы его заново.
-    if (id === active.current) load(emptyDeclaration())
-    setList(listDrafts())
+    // Удалили открытый черновик — пустая форма того же типа; без detached
+    // размонтирование сохранило бы удалённое заново.
+    if (id === active.current) {
+      detached.current = true
+      onSwitch({ form })
+    } else setList(listDrafts())
   }
 
   return {
+    form,
     list,
     activeId,
     status,
@@ -139,7 +130,7 @@ export function useDrafts(restored: Draft | undefined, onLoad: () => void) {
     hasContent: !!activeId || formState.isDirty,
     open,
     startNew,
-    startForAnotherBuilding,
+    startForSameTaxpayer,
     remove,
   }
 }
@@ -152,8 +143,11 @@ function formatSavedAt(ms: number): string {
   return (today ? timeOnly : dateTime).format(ms)
 }
 
+/** Чем отличается тип декларации — в подписи кнопки. */
+const OBJECT = { itl002: 'clădire', itl004: 'teren' } satisfies Record<FormId, string>
+
 export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
-  const { list, activeId, status, hasContent } = drafts
+  const { form, list, activeId, status, hasContent } = drafts
   const [expanded, setExpanded] = useState(false)
   const listId = useId()
   // Кнопки видны всегда (неактивные — пока нечего сохранять), чтобы форма не прыгала при первом сохранении.
@@ -173,12 +167,23 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
       )}
 
       <div className="actions">
-        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startNew()}>
-          Declarație nouă
-        </button>
-        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startForAnotherBuilding()}>
-          Altă clădire, același contribuabil
-        </button>
+        <span className="actions-label">Declarație nouă:</span>
+        {FORM_IDS.map((id) => (
+          // Новая пустая декларация того же типа имеет смысл, только если текущая не пуста.
+          <NewButton key={id} prefix="Declarație nouă" label={`${FORMS[id].code} — ${OBJECT[id]}`} disabled={id === form && !hasContent} onClick={() => drafts.startNew(id)} />
+        ))}
+      </div>
+      <div className="actions">
+        <span className="actions-label">Același contribuabil:</span>
+        {FORM_IDS.map((id) => (
+          <NewButton
+            key={id}
+            prefix="Același contribuabil"
+            label={`${FORMS[id].code} — ${id === form && id === 'itl002' ? 'altă clădire' : OBJECT[id]}`}
+            disabled={!hasContent}
+            onClick={() => drafts.startForSameTaxpayer(id)}
+          />
+        ))}
         <button
           type="button"
           className="link"
@@ -193,10 +198,12 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
 
       <ul id={listId} className="drafts-list" hidden={!expanded || list.length === 0}>
         {list.map((d) => {
-          const title = draftTitle(d.values)
+          const title = draftTitle(d)
           return (
             <li key={d.id}>
-              <span className="draft-title">{title}</span>
+              <span className="draft-title">
+                <span className="draft-form">{FORMS[d.form].code}</span> {title}
+              </span>
               <span className="draft-time">{formatSavedAt(d.updatedAt)}</span>
               {d.id === activeId ? (
                 <span className="draft-current">deschisă</span>
@@ -213,5 +220,14 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
         })}
       </ul>
     </div>
+  )
+}
+
+/** Подписи в двух рядах повторяются — в доступное имя входит и заголовок ряда. */
+function NewButton({ prefix, label, disabled, onClick }: { prefix: string; label: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button type="button" className="secondary" aria-label={`${prefix}: ${label}`} disabled={disabled} onClick={onClick}>
+      {label}
+    </button>
   )
 }

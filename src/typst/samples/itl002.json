@@ -1,0 +1,150 @@
+{
+  "antet": {
+    "rolNominal": "123456789",
+    "registruTip": "II",
+    "registruVolum": "12",
+    "registruPozitie": "345"
+  },
+  "contribuabil": {
+    "denumire": "Exemplu Construcții Țărănești S.R.L.",
+    "cui": "18547290",
+    "telefon": "021 123 45 67",
+    "email": "contabilitate@exemplu.ro",
+    "sediu": {
+      "strada": "Bd. Ștefan cel Mare",
+      "nr": "14",
+      "codPostal": "020121",
+      "bloc": "A2",
+      "scara": "1",
+      "etaj": "3",
+      "apartament": "12",
+      "localitate": "București",
+      "judet": "Sector 2",
+      "tara": "România"
+    },
+    "comunicareEmail": "da",
+    "corespondenta": {
+      "strada": "Str. Viitorului",
+      "nr": "7",
+      "codPostal": "020613",
+      "bloc": "B",
+      "scara": "2",
+      "etaj": "4",
+      "apartament": "41",
+      "localitate": "București",
+      "judet": "",
+      "tara": ""
+    }
+  },
+  "imputernicit": {
+    "nume": "Popescu",
+    "prenume": "Ion-Mihăiță",
+    "cif": "1800101221144",
+    "telefon": "0722 123 456",
+    "email": "ion.popescu@exemplu.ro",
+    "adresa": {
+      "strada": "Str. Lizeanu",
+      "nr": "21",
+      "codPostal": "020232",
+      "bloc": "C3",
+      "scara": "A",
+      "etaj": "2",
+      "apartament": "9",
+      "localitate": "București",
+      "judet": "Sector 2",
+      "tara": "România"
+    }
+  },
+  "adresaStrainatate": "Rue de la Paix 12, 75002 Paris, Franța",
+  "cladire": {
+    "tip": "mixta",
+    "nrAct": "1234/2023",
+    "dataDobandirii": "15.03.2023",
+    "valoareAchizitie": "1.250.000,00",
+    "formaDobandire": "proprietate",
+    "formaAlta": "",
+    "adresa": {
+      "strada": "Șos. Mihai Bravu",
+      "nr": "200",
+      "codPostal": "",
+      "bloc": "P1",
+      "scara": "B",
+      "etaj": "5",
+      "apartament": "18",
+      "localitate": "Sector 2",
+      "judet": "",
+      "tara": ""
+    },
+    "indicatori": {
+      "a": {
+        "rez": {
+          "valoare": "700.000,00",
+          "data": "15.01.2024"
+        },
+        "nerez": {
+          "valoare": "480.000,00",
+          "data": "15.01.2024"
+        }
+      },
+      "b": {
+        "rez": {
+          "valoare": "760.500,50",
+          "data": "30.06.2025"
+        },
+        "nerez": {
+          "valoare": "520.000,00",
+          "data": "30.06.2025"
+        }
+      },
+      "c": {
+        "rez": {
+          "valoare": "",
+          "data": ""
+        },
+        "nerez": {
+          "valoare": "",
+          "data": ""
+        }
+      },
+      "d": {
+        "rez": {
+          "valoare": "750.000,00",
+          "data": "15.03.2023"
+        },
+        "nerez": {
+          "valoare": "500.000,00",
+          "data": "15.03.2023"
+        }
+      },
+      "e": {
+        "rez": {
+          "valoare": "745.210,35",
+          "data": "31.12.2025"
+        },
+        "nerez": {
+          "valoare": "498.300,00",
+          "data": "31.12.2025"
+        }
+      }
+    }
+  },
+  "anexe": [
+    "Contract de vânzare-cumpărare nr. 1234/2023",
+    "Încheiere de intabulare",
+    "Extras de carte funciară",
+    "Raport de evaluare nr. 56/2025",
+    "Certificat de înregistrare ONRC",
+    "Proces-verbal de recepție",
+    "Balanța de verificare la 31.12.2025",
+    "Împuternicire notarială",
+    "Copie act de identitate împuternicit"
+  ],
+  "actIdentitate": {
+    "tip": "CI",
+    "serie": "RX",
+    "numar": "123456",
+    "eliberatDe": "SPCEP Sector 2",
+    "data": "10.05.2020"
+  },
+  "dataDeclaratiei": "04.11.2026"
+}

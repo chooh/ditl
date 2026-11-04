@@ -1,79 +1,24 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
-import { formatDate } from '../pdf/format'
-import { declarationSchema, type DeclarationInput } from './schema'
+import type { ZodType } from 'zod'
 
 /**
  * Разделы сплошной формы. Раздел без ошибок сворачивается, когда фокус переходит
  * за его пределы, и показывает краткую сводку; кликом по заголовку его можно
  * открыть снова. Порядок заполнения не навязывается.
  */
-const SECTIONS = [
-  {
-    id: 'contribuabil',
-    title: 'I. Date de identificare a contribuabilului',
-    keys: ['contribuabil'],
-    summary: ({ contribuabil: c }) => join(c.denumire, c.cui && `CUI ${c.cui}`, c.sediu.localitate),
-  },
-  {
-    id: 'imputernicit',
-    title: 'II. Date de identificare a împuternicitului',
-    keys: ['imputernicit'],
-    summary: ({ imputernicit: i }) => (i.exista ? join(`${i.nume} ${i.prenume}`.trim(), i.cif) : 'Fără împuternicit'),
-  },
-  {
-    id: 'strainatate',
-    title: 'III. Adresa de rezidență în alt stat decât România',
-    keys: ['adresaStrainatate'],
-    summary: (v) => v.adresaStrainatate || 'Nu este cazul',
-  },
-  {
-    id: 'cladire',
-    title: 'IV. Datele clădirii',
-    keys: ['cladire'],
-    summary: ({ cladire: c }) => join(BUILDING_TYPE_LABELS[c.tip], `${c.adresa.strada} ${c.adresa.nr}`.trim(), c.adresa.localitate),
-  },
-  {
-    id: 'anexe',
-    title: 'Documente anexate',
-    keys: ['anexe'],
-    summary: (v) => {
-      const n = v.anexe.filter((a) => a.denumire.trim()).length
-      return n === 0 ? 'Niciun document' : n === 1 ? '1 document' : `${n} documente`
-    },
-  },
-  {
-    id: 'declaratie',
-    title: 'Declarație',
-    keys: ['actIdentitate', 'dataDeclaratiei'],
-    summary: ({ actIdentitate: a, dataDeclaratiei }) => join(`${a.tip} ${a.serie} ${a.numar}`.trim(), formatDate(dataDeclaratiei)),
-  },
-  {
-    id: 'antet',
-    title: 'Date administrative (opțional)',
-    keys: ['antet'],
-    summary: (v) => (v.antet.rolNominal ? `Rol nominal ${v.antet.rolNominal}` : 'Necompletat'),
-  },
-] as const satisfies readonly {
+export type SectionDef<V> = {
   id: string
   title: string
-  keys: readonly (keyof DeclarationInput)[]
-  summary: (v: DeclarationInput) => string
-}[]
-
-export type SectionId = (typeof SECTIONS)[number]['id']
-
-const BUILDING_TYPE_LABELS: Record<string, string> = {
-  nerezidentiala: 'Nerezidențială',
-  rezidentiala: 'Rezidențială',
-  mixta: 'Mixtă',
+  /** Ключи верхнего уровня значений формы, которые относятся к разделу. */
+  keys: readonly (keyof V & string)[]
+  summary: (values: V) => string
 }
 
-const join = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ')
-
-const sectionOfKey = new Map<string, SectionId>(SECTIONS.flatMap((s) => s.keys.map((k) => [k, s.id] as const)))
+export const join = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ')
 
 type SectionState = {
+  title: string
   /** Сколько проблем находит схема в этом разделе прямо сейчас. */
   issues: number
   /** Пользователь уже заходил в раздел — только тогда показываем количество ошибок. */
@@ -83,15 +28,13 @@ type SectionState = {
 }
 
 type SectionsApi = {
-  get(id: SectionId): SectionState
-  setOpen(id: SectionId, open: boolean): void
-  markVisited(id: SectionId): void
+  get(id: string): SectionState
+  setOpen(id: string, open: boolean): void
+  markVisited(id: string): void
   /** Раскрыть разделы, к которым относятся ключи верхнего уровня (например, из ошибок формы). */
   openForKeys(keys: string[]): void
-  /** Свернуть или раскрыть всё; `forget` сбрасывает отметки о посещении. */
-  setAll(open: boolean, options?: { forget?: boolean }): void
-  /** Для только что загруженных значений: свернуть готовые разделы, раскрыть остальные, забыть посещения. */
-  collapseCompleted(values: DeclarationInput): void
+  /** Для только что загруженных значений: свернуть готовые разделы, раскрыть остальные. */
+  collapseCompleted(values: unknown): void
   done: number
   total: number
 }
@@ -104,53 +47,57 @@ export function useSections(): SectionsApi {
   return ctx
 }
 
-const allIds = SECTIONS.map((s) => s.id)
-const byId = <T,>(ids: readonly SectionId[], value: T) => Object.fromEntries(ids.map((id) => [id, value])) as Record<SectionId, T>
+const byId = <T,>(ids: readonly string[], value: T): Record<string, T> => Object.fromEntries(ids.map((id) => [id, value]))
 
-function countIssues(values: DeclarationInput): Record<SectionId, number> {
-  const issues = byId(allIds, 0)
-  const result = declarationSchema.safeParse(values)
-  for (const issue of result.success ? [] : result.error.issues) {
-    const id = sectionOfKey.get(String(issue.path[0]))
-    if (id) issues[id]++
-  }
-  return issues
+type Props<V> = {
+  sections: readonly SectionDef<V>[]
+  schema: ZodType
+  children: ReactNode
 }
 
-export function SectionsProvider({ children }: { children: ReactNode }) {
-  const { control, getValues } = useFormContext<DeclarationInput>()
+export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
+  const { control, getValues } = useFormContext()
   // Подписка на все поля: провайдер перерисовывается при каждом изменении,
   // а children — нет (это те же элементы, что пришли сверху).
   useWatch({ control })
-  const values = getValues()
+  const values = getValues() as V
 
+  const allIds = sections.map((s) => s.id)
+  const sectionOfKey = new Map<string, string>(sections.flatMap((s) => s.keys.map((k) => [k, s.id] as const)))
   const [open, setOpenMap] = useState(() => byId(allIds, true))
   const [visited, setVisited] = useState(() => byId(allIds, false))
 
-  // Полная проверка схемой на каждое изменение — доли миллисекунды для ~60 полей.
+  const countIssues = (v: unknown) => {
+    const issues = byId(allIds, 0)
+    const result = schema.safeParse(v)
+    for (const issue of result.success ? [] : result.error.issues) {
+      const id = sectionOfKey.get(String(issue.path[0]))
+      if (id) issues[id]!++
+    }
+    return issues
+  }
+  // Полная проверка схемой на каждое изменение — доли миллисекунды для сотни полей.
   const issues = countIssues(values)
+  const section = (id: string) => sections.find((s) => s.id === id)!
 
   const api: SectionsApi = {
     get: (id) => ({
-      issues: issues[id],
-      visited: visited[id],
-      open: open[id],
-      summary: SECTIONS.find((s) => s.id === id)!.summary(values),
+      title: section(id).title,
+      issues: issues[id]!,
+      visited: visited[id]!,
+      open: open[id]!,
+      summary: section(id).summary(values),
     }),
     setOpen: (id, value) => setOpenMap((m) => ({ ...m, [id]: value })),
     markVisited: (id) => setVisited((m) => (m[id] ? m : { ...m, [id]: true })),
     openForKeys: (keys) => {
-      const ids = keys.map((k) => sectionOfKey.get(k)).filter((id): id is SectionId => !!id)
+      const ids = keys.map((k) => sectionOfKey.get(k)).filter((id): id is string => !!id)
       setOpenMap((m) => ({ ...m, ...byId(ids, true) }))
       setVisited((m) => ({ ...m, ...byId(ids, true) }))
     },
-    setAll: (value, options) => {
-      setOpenMap(byId(allIds, value))
-      if (options?.forget) setVisited(byId(allIds, false))
-    },
     collapseCompleted: (loaded) => {
       const loadedIssues = countIssues(loaded)
-      setOpenMap(Object.fromEntries(allIds.map((id) => [id, loadedIssues[id] > 0])) as Record<SectionId, boolean>)
+      setOpenMap(Object.fromEntries(allIds.map((id) => [id, loadedIssues[id]! > 0])))
       setVisited(byId(allIds, false))
     },
     done: allIds.filter((id) => issues[id] === 0).length,
@@ -160,10 +107,9 @@ export function SectionsProvider({ children }: { children: ReactNode }) {
   return <SectionsContext.Provider value={api}>{children}</SectionsContext.Provider>
 }
 
-export function Section({ id, children }: { id: SectionId; children: ReactNode }) {
+export function Section({ id, children }: { id: string; children: ReactNode }) {
   const sections = useSections()
-  const { issues, visited, open, summary } = sections.get(id)
-  const title = SECTIONS.find((s) => s.id === id)!.title
+  const { title, issues, visited, open, summary } = sections.get(id)
   const bodyId = `section-${id}`
 
   const status =
