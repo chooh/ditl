@@ -20,8 +20,9 @@
   по кнопке на экране результата; дальше браузер берёт его из кэша.
 - Черновики автосохраняются в `localStorage` этого браузера и переживают перезагрузку.
 
-Стек: React + TypeScript + Zod (через react-hook-form), Typst (typst.ts в браузере),
-Vite, Vitest. Хостинг — GitHub Pages.
+Стек: React + TypeScript + Zod (через react-hook-form), интерфейс на
+[Carbon Design System](https://carbondesignsystem.com) (`@carbon/react`), Typst (typst.ts
+в браузере), Vite, Vitest. Хостинг — GitHub Pages.
 
 ## Окружение
 
@@ -52,13 +53,15 @@ src/
   form/fields.tsx       поля формы, адресный блок, приложения
   form/sections.tsx     сворачиваемые разделы: статус, сводка, автосворачивание
   drafts/               черновики в localStorage и панель черновиков
+  styles.scss           стили Carbon (только используемые компоненты), темы White / Gray 100, свои классы
   typst/                шаблоны и сборка .typ (см. ниже)
   output/Result.tsx     экран результата: список .typ, кнопка загрузки компилятора, выбор документа для PDF
   output/PdfView.tsx    ленивый чанк: компилятор Typst, предпросмотр и «Descarcă PDF»
   assets/fonts/         Liberation Sans/Serif (OFL), метрически совместимы с Arial/Times бланков
 
 public/
-  LICENSE-Liberation.txt  текст OFL 1.1; Vite кладёт его в корень dist/ (см. «Лицензия шрифтов»)
+  LICENSE-Liberation.txt  тексты OFL 1.1; Vite кладёт их в корень dist/ (см. «Лицензия шрифтов»)
+  LICENSE-IBM-Plex.txt
 ```
 
 ### Шаблоны Typst
@@ -184,6 +187,10 @@ Liberation Sans/Serif 2.1.5 — © 2012 Red Hat, Inc. под [SIL Open Font Lice
 требует прикладывать к каждой распространяемой копии шрифта копирайт и текст лицензии —
 поэтому лицензия лежит в `public/` и на неё ссылается футер страницы. При добавлении или
 замене шрифтов это условие нужно выполнить заново.
+
+Интерфейс набран IBM Plex Sans/Mono — © 2017 IBM Corp., тоже под OFL 1.1 (`public/LICENSE-IBM-Plex.txt`).
+Carbon по умолчанию берёт `.woff2` из пакета `@ibm/plex` (`$font-path` в `src/styles.scss`), и Vite
+кладёт их в сборку: CSP пускает шрифты только со своего origin, CDN IBM не используется.
 
 На сгенерированные PDF лицензия не распространяется: OFL прямо исключает документы,
 созданные с помощью шрифта. Встраивание шрифта в PDF разрешено.

@@ -1,3 +1,5 @@
+import { Button, ContainedList, ContainedListItem, InlineNotification } from '@carbon/react'
+import { Add, ChevronDown, ChevronUp, Copy, TrashCan } from '@carbon/icons-react'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFormContext } from 'react-hook-form'
 import { forSameCompany, type DossierInput } from '../dossier/schema'
@@ -145,12 +147,18 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
   const [expanded, setExpanded] = useState(false)
   const listId = useId()
   // Кнопки видны всегда (неактивные — пока нечего сохранять), чтобы форма не прыгала при первом сохранении.
+  const open = expanded && list.length > 0
   return (
     <div className="drafts">
       {status.failed ? (
-        <p className="error" role="alert">
-          Ciorna nu a putut fi salvată: spațiul de stocare al browserului este plin sau blocat.
-        </p>
+        <InlineNotification
+          kind="error"
+          role="alert"
+          lowContrast
+          hideCloseButton
+          title="Ciorna nu a putut fi salvată:"
+          subtitle="spațiul de stocare al browserului este plin sau blocat."
+        />
       ) : (
         <p className="hint">
           {status.savedAt
@@ -161,45 +169,60 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
       )}
 
       <div className="actions">
-        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startNew()}>
+        <Button kind="tertiary" size="md" renderIcon={Add} disabled={!hasContent} onClick={() => drafts.startNew()}>
           Dosar nou
-        </button>
-        <button type="button" className="secondary" disabled={!hasContent} onClick={() => drafts.startForSameCompany()}>
+        </Button>
+        <Button kind="tertiary" size="md" renderIcon={Copy} disabled={!hasContent} onClick={() => drafts.startForSameCompany()}>
           Dosar nou pentru aceeași firmă
-        </button>
-        <button
-          type="button"
-          className="link"
+        </Button>
+        <Button
+          kind="ghost"
+          size="md"
+          renderIcon={open ? ChevronUp : ChevronDown}
           disabled={list.length === 0}
-          aria-expanded={expanded && list.length > 0}
+          aria-expanded={open}
           aria-controls={listId}
           onClick={() => setExpanded(!expanded)}
         >
           Ciornele mele ({list.length})
-        </button>
+        </Button>
       </div>
 
-      <ul id={listId} className="drafts-list" hidden={!expanded || list.length === 0}>
-        {list.map((d) => {
-          const title = draftTitle(d)
-          return (
-            <li key={d.id}>
-              <span className="draft-title">{title}</span>
-              <span className="draft-time">{formatSavedAt(d.updatedAt)}</span>
-              {d.id === activeId ? (
-                <span className="draft-current">deschisă</span>
-              ) : (
-                <button type="button" className="link" onClick={() => drafts.open(d.id)} aria-label={`Deschide ciorna ${title}`}>
-                  Deschide
-                </button>
-              )}
-              <button type="button" className="link" onClick={() => drafts.remove(d.id)} aria-label={`Șterge ciorna ${title}`}>
-                Șterge
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+      <div id={listId} hidden={!open}>
+        <ContainedList label="Ciornele mele" kind="on-page" size="md">
+          {list.map((d) => {
+            const title = draftTitle(d)
+            return (
+              <ContainedListItem
+                key={d.id}
+                action={
+                  <div className="actions">
+                    {d.id === activeId ? (
+                      <span className="draft-time">deschisă</span>
+                    ) : (
+                      <Button kind="ghost" size="sm" onClick={() => drafts.open(d.id)} aria-label={`Deschide ciorna ${title}`}>
+                        Deschide
+                      </Button>
+                    )}
+                    <Button
+                      kind="danger--ghost"
+                      size="sm"
+                      renderIcon={TrashCan}
+                      onClick={() => drafts.remove(d.id)}
+                      aria-label={`Șterge ciorna ${title}`}
+                    >
+                      Șterge
+                    </Button>
+                  </div>
+                }
+              >
+                {title}
+                <span className="draft-time">{formatSavedAt(d.updatedAt)}</span>
+              </ContainedListItem>
+            )
+          })}
+        </ContainedList>
+      </div>
     </div>
   )
 }

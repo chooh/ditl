@@ -1,5 +1,7 @@
-import { useId, type InputHTMLAttributes } from 'react'
-import { useFieldArray, useFormContext, type Path } from 'react-hook-form'
+import { Button, RadioButton, RadioButtonGroup, TextInput } from '@carbon/react'
+import { Add, TrashCan } from '@carbon/icons-react'
+import { useId, type ComponentProps } from 'react'
+import { Controller, useFieldArray, useFormContext, type Path } from 'react-hook-form'
 import type { DossierInput } from '../dossier/schema'
 import { MAX_ATTACHMENTS } from './common'
 
@@ -13,7 +15,7 @@ function useFieldError(name: FieldPath) {
 
 export function ErrorText({ name }: { name: FieldPath }) {
   const message = useFieldError(name)
-  return message ? <span className="error">{message}</span> : null
+  return message ? <p className="error">{message}</p> : null
 }
 
 type TextFieldProps = {
@@ -21,46 +23,50 @@ type TextFieldProps = {
   label: string
   /** Поле на всю ширину строки сетки. */
   wide?: boolean
-} & Omit<InputHTMLAttributes<HTMLInputElement>, 'name'>
+} & Omit<ComponentProps<typeof TextInput>, 'id' | 'name' | 'labelText' | 'invalid' | 'invalidText'>
 
 export function TextField({ name, label, wide, ...input }: TextFieldProps) {
   const { register } = useFormContext()
   const error = useFieldError(name)
   const id = useId()
   return (
-    <div className={wide ? 'field wide' : 'field'}>
-      <label htmlFor={id}>{label}</label>
-      <input
-        {...input}
-        {...register(name)}
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-      />
-      {error && (
-        <span id={`${id}-error`} className="error">
-          {error}
-        </span>
-      )}
-    </div>
+    <TextInput
+      {...input}
+      {...register(name)}
+      id={id}
+      className={wide ? 'wide' : undefined}
+      labelText={label}
+      invalid={!!error}
+      invalidText={error}
+    />
   )
 }
 
 export function RadioGroup({ name, legend, options }: { name: FieldPath; legend: string; options: readonly (readonly [string, string])[] }) {
-  const { register } = useFormContext()
+  const { control } = useFormContext()
+  const id = useId()
   return (
-    <div className="radio-group" role="radiogroup" aria-label={legend}>
-      <span className="radio-legend">{legend}</span>
-      <div className="radio-options">
-        {options.map(([value, label]) => (
-          <label key={value} className="checkbox">
-            <input type="radio" value={value} {...register(name)} />
-            {label}
-          </label>
-        ))}
-      </div>
-      <ErrorText name={name} />
-    </div>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => (
+        <RadioButtonGroup
+          className="radio-group"
+          name={field.name}
+          legendText={legend}
+          valueSelected={field.value as string}
+          onChange={(value) => field.onChange(value)}
+          onBlur={field.onBlur}
+          invalid={!!fieldState.error}
+          invalidText={fieldState.error?.message}
+        >
+          {options.map(([value, label], i) => (
+            // ref — на первую кнопку: на неё react-hook-form ставит фокус при ошибке.
+            <RadioButton key={value} id={`${id}-${value}`} value={value} labelText={label} ref={i === 0 ? field.ref : undefined} />
+          ))}
+        </RadioButtonGroup>
+      )}
+    />
   )
 }
 
@@ -123,16 +129,23 @@ export function AttachmentsFields({ name, label }: { name: AttachmentsPath; labe
         <div key={field.id} className="annex">
           <TextField name={`${name}.${i}.name`} label={`${i + 1}.`} aria-label={`${label}: documentul ${i + 1}`} autoComplete="off" />
           {fields.length > 1 && (
-            <button type="button" className="link" onClick={() => remove(i)} aria-label={`${label}: șterge documentul ${i + 1}`}>
-              Șterge
-            </button>
+            <Button
+              kind="danger--ghost"
+              size="md"
+              hasIconOnly
+              renderIcon={TrashCan}
+              iconDescription="Șterge"
+              tooltipPosition="left"
+              onClick={() => remove(i)}
+              aria-label={`${label}: șterge documentul ${i + 1}`}
+            />
           )}
         </div>
       ))}
       {fields.length < MAX_ATTACHMENTS && (
-        <button type="button" className="secondary" onClick={() => append({ name: '' })} aria-label={`${label}: adaugă document`}>
+        <Button kind="tertiary" size="md" renderIcon={Add} onClick={() => append({ name: '' })} aria-label={`${label}: adaugă document`}>
           Adaugă document
-        </button>
+        </Button>
       )}
     </>
   )

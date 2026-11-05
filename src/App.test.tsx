@@ -5,9 +5,15 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
 beforeAll(() => {
-  // В jsdom нет scrollIntoView и scrollTo — разделы и экран результата их вызывают.
+  // В jsdom нет scrollIntoView, scrollTo и ResizeObserver — их вызывают разделы,
+  // экран результата и CodeSnippet из Carbon.
   Element.prototype.scrollIntoView = () => {}
   window.scrollTo = () => {}
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
 })
 afterEach(() => {
   cleanup()
@@ -15,7 +21,8 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-const section = (title: RegExp) => screen.getByRole('button', { name: title }).closest('section')!
+/** Раздел — пункт Carbon Accordion (<li>), заголовок — его кнопка. */
+const section = (title: RegExp) => screen.getByRole('button', { name: title }).closest('li')!
 const isOpen = (title: RegExp) => screen.getByRole('button', { name: title }).getAttribute('aria-expanded') === 'true'
 const input = (label: string, i = 0) => screen.getAllByLabelText(label)[i] as HTMLInputElement
 const fillSample = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
@@ -34,7 +41,7 @@ describe('сворачиваемые разделы', () => {
     render(<App />)
     expect(isOpen(/Contribuabilul \(persoana juridică\)/)).toBe(true)
     expect(within(section(/Imobilele/)).getByText('De completat')).toBeTruthy()
-    expect(within(section(/Scutiri/)).getByText('✓ Gata')).toBeTruthy()
+    expect(within(section(/Scutiri/)).getByText('Gata')).toBeTruthy()
   })
 
   it('раздел без ошибок сворачивается, когда фокус уходит в другой раздел', async () => {
@@ -93,7 +100,8 @@ describe('сворачиваемые разделы', () => {
 
     expect(isOpen(/Imobilele/)).toBe(true)
     expect(document.activeElement).toBe(input('Comuna / orașul / municipiul', 1))
-    expect(screen.getByRole('alert').textContent).toMatch(/conține erori/)
+    // У каждого TextInput Carbon есть (пустой) role="alert" — ищем общее сообщение формы.
+    expect(screen.getByText(/conține erori/).closest('[role="alert"]')).toBeTruthy()
   })
 })
 

@@ -1,0 +1,239 @@
+// Carbon Design System. Подключаются только стили используемых компонентов —
+// весь @carbon/react весит в несколько раз больше.
+//
+// Шрифты IBM Plex раздаются из сборки, а не с CDN IBM: CSP разрешает шрифты
+// только со своего origin (font-src 'self'), а страница не должна обращаться
+// к сторонним серверам. Serif не нужен — его Carbon подключает по умолчанию.
+@use '@carbon/styles/scss/config' with (
+  $font-path: '@ibm/plex',
+);
+@use '@carbon/styles/scss/fonts' with (
+  $fonts: (
+    IBM-Plex-Serif: false,
+  ),
+);
+@use '@carbon/styles/scss/reset';
+@use '@carbon/styles/scss/grid';
+// Размеры (высота кнопок и полей) задаются через layout-токены — без них контролы сплющиваются.
+@use '@carbon/styles/scss/layout';
+@use '@carbon/styles/scss/themes';
+@use '@carbon/styles/scss/theme';
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type';
+@use '@carbon/styles/scss/components/accordion';
+@use '@carbon/styles/scss/components/button';
+@use '@carbon/styles/scss/components/code-snippet';
+@use '@carbon/styles/scss/components/contained-list';
+@use '@carbon/styles/scss/components/form';
+@use '@carbon/styles/scss/components/inline-loading';
+@use '@carbon/styles/scss/components/link';
+@use '@carbon/styles/scss/components/notification';
+@use '@carbon/styles/scss/components/progress-bar';
+@use '@carbon/styles/scss/components/radio-button';
+@use '@carbon/styles/scss/components/select';
+@use '@carbon/styles/scss/components/stack';
+@use '@carbon/styles/scss/components/tag';
+@use '@carbon/styles/scss/components/text-input';
+@use '@carbon/styles/scss/components/ui-shell';
+
+// Светлая тема White, в тёмном режиме системы — Gray 100.
+:root {
+  @include theme.theme(themes.$white);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include theme.theme(themes.$g100);
+    color-scheme: dark;
+  }
+}
+
+body {
+  background: theme.$background;
+  color: theme.$text-primary;
+}
+
+// ── Каркас страницы ──
+.page {
+  padding-block: $spacing-07 $spacing-10;
+}
+
+.page-title {
+  @include type.type-style('fluid-heading-05', true);
+  margin-block-end: $spacing-05;
+}
+
+.lead {
+  @include type.type-style('body-02');
+  margin-block-end: $spacing-05;
+}
+
+.note,
+.hint {
+  @include type.type-style('helper-text-01');
+  color: theme.$text-secondary;
+}
+
+.hint {
+  margin-block-end: $spacing-05;
+}
+
+.page-footer {
+  @include type.type-style('helper-text-01');
+  margin-block-start: $spacing-09;
+  padding-block-start: $spacing-05;
+  border-block-start: 1px solid theme.$border-subtle;
+  color: theme.$text-secondary;
+}
+
+.error {
+  @include type.type-style('helper-text-01');
+  color: theme.$text-error;
+}
+
+.subheading {
+  @include type.type-style('heading-compact-02');
+  margin-block: $spacing-06 $spacing-04;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.dev-tools {
+  padding: $spacing-03;
+  border: 1px dashed theme.$border-strong;
+}
+
+// ── Разделы (Accordion) ──
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-02 $spacing-04;
+}
+
+.section-name {
+  @include type.type-style('heading-compact-02');
+  flex: 1;
+}
+
+.section-summary {
+  @include type.type-style('helper-text-01');
+  flex-basis: 100%;
+  color: theme.$text-secondary;
+}
+
+// Поля формы не должны упираться в правый край, как текст аккордеона.
+.cds--accordion__content {
+  padding-inline-end: $spacing-05;
+}
+
+// ── Поля ──
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: $spacing-05 $spacing-05;
+  margin-block-end: $spacing-05;
+}
+
+.grid .wide {
+  grid-column: 1 / -1;
+}
+
+.radio-group {
+  margin-block-end: $spacing-05;
+
+  // Длинные варианты (формы приобретения) переносятся, а не растягивают страницу.
+  .cds--radio-button-group {
+    flex-wrap: wrap;
+    row-gap: $spacing-03;
+    min-inline-size: 0;
+  }
+}
+
+.parcel {
+  // У fieldset по умолчанию min-inline-size: min-content — на телефоне он вылезал за экран.
+  min-inline-size: 0;
+  margin-block-end: $spacing-05;
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle;
+  background: theme.$layer-01;
+}
+
+.parcel > legend {
+  @include type.type-style('heading-compact-01');
+  color: theme.$text-primary;
+}
+
+.indicator {
+  padding-block-start: $spacing-04;
+  border-block-start: 1px solid theme.$border-subtle;
+}
+
+.indicator-label {
+  @include type.type-style('body-compact-01');
+  margin-block-end: $spacing-03;
+}
+
+.annex {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-03;
+  margin-block-end: $spacing-03;
+}
+
+.annex .cds--form-item {
+  flex: 1;
+}
+
+.categories {
+  margin-block-end: $spacing-05;
+}
+
+// ── Черновики ──
+.draft-time {
+  @include type.type-style('helper-text-01');
+  margin-inline-start: $spacing-04;
+  color: theme.$text-secondary;
+}
+
+// ── Результат ──
+.preview-heading {
+  @include type.type-style('heading-04');
+  margin-block-end: $spacing-05;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.preview iframe {
+  display: block;
+  inline-size: 100%;
+  block-size: 80vh;
+  border: 1px solid theme.$border-subtle;
+  background: #fff;
+}
+
+.diagnostics {
+  @include type.type-style('code-01');
+  overflow-x: auto;
+  padding: $spacing-03;
+  border: 1px solid theme.$border-subtle;
+  background: theme.$layer-01;
+}
+
+.drafts > .hint {
+  margin-block-end: $spacing-03;
+}
+
+// Колонка Stack (CSS grid) по умолчанию не уже min-content содержимого — на телефоне
+// длинные заголовки и кнопки раздвигали страницу шире экрана.
+.cds--stack-vertical {
+  grid-template-columns: minmax(0, 1fr);
+}

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { AccordionItem, Tag } from '@carbon/react'
+import { createContext, useContext, useState, type FocusEvent, type ReactNode } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
 
@@ -107,44 +108,56 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   return <SectionsContext.Provider value={api}>{children}</SectionsContext.Provider>
 }
 
+/** Раздел — пункт Carbon Accordion; все разделы формы лежат в одном <Accordion>. */
 export function Section({ id, children }: { id: string; children: ReactNode }) {
   const sections = useSections()
   const { title, issues, visited, open, summary } = sections.get(id)
-  const bodyId = `section-${id}`
 
   const status =
-    issues === 0
-      ? { className: 'done', text: '✓ Gata' }
-      : visited
-        ? { className: 'error', text: issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat` }
-        : { className: 'todo', text: 'De completat' }
+    issues === 0 ? (
+      <Tag type="green" size="sm">
+        Gata
+      </Tag>
+    ) : visited ? (
+      <Tag type="red" size="sm">
+        {issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat`}
+      </Tag>
+    ) : (
+      <Tag type="gray" size="sm">
+        De completat
+      </Tag>
+    )
+
+  // Фокус отслеживается на <li> раздела: AccordionItem передаёт ему остальные props,
+  // хотя в его типах их нет (поэтому — через spread).
+  const focusTracking = {
+    onFocus: () => sections.markVisited(id),
+    onBlur: (e: FocusEvent<HTMLLIElement>) => {
+      // Сворачиваем только при переходе фокуса на элемент ВНЕ раздела: если фокус
+      // просто пропал (клик по пустому месту, удалённая кнопка) — ничего не делаем.
+      const next = e.relatedTarget
+      if (!(next instanceof HTMLElement) || e.currentTarget.contains(next) || issues > 0) return
+      sections.setOpen(id, false)
+      // Раздел выше схлопнулся — вернуть в поле зрения элемент, куда ушёл фокус.
+      requestAnimationFrame(() => next.scrollIntoView({ block: 'nearest' }))
+    },
+  }
 
   return (
-    <section
-      className={open ? 'section' : 'section collapsed'}
-      aria-labelledby={`${bodyId}-title`}
-      onFocus={() => sections.markVisited(id)}
-      onBlur={(e) => {
-        // Сворачиваем только при переходе фокуса на элемент ВНЕ раздела: если фокус
-        // просто пропал (клик по пустому месту, удалённая кнопка) — ничего не делаем.
-        const next = e.relatedTarget
-        if (!(next instanceof HTMLElement) || e.currentTarget.contains(next) || issues > 0) return
-        sections.setOpen(id, false)
-        // Раздел выше схлопнулся — вернуть в поле зрения элемент, куда ушёл фокус.
-        requestAnimationFrame(() => next.scrollIntoView({ block: 'nearest' }))
-      }}
-    >
-      <h2 className="section-title">
-        <button type="button" id={`${bodyId}-title`} aria-expanded={open} aria-controls={bodyId} onClick={() => sections.setOpen(id, !open)}>
+    // Тело раздела всегда в DOM (Carbon скрывает его стилями): поля остаются зарегистрированными в форме.
+    <AccordionItem
+      {...focusTracking}
+      open={open}
+      onHeadingClick={({ isOpen }) => sections.setOpen(id, isOpen)}
+      title={
+        <span className="section-heading">
           <span className="section-name">{title}</span>
-          <span className={`badge ${status.className}`}>{status.text}</span>
+          {status}
           {!open && summary && <span className="section-summary">{summary}</span>}
-        </button>
-      </h2>
-      {/* hidden, а не условный рендер: поля остаются зарегистрированными в форме. */}
-      <div id={bodyId} className="section-body" hidden={!open}>
-        {children}
-      </div>
-    </section>
+        </span>
+      }
+    >
+      {children}
+    </AccordionItem>
   )
 }

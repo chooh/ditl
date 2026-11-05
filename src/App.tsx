@@ -1,3 +1,5 @@
+import { Button, Column, Content, Grid, Header, HeaderName, InlineNotification, Link, ProgressBar, SkipToContent, Stack } from '@carbon/react'
+import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -59,30 +61,61 @@ function Editor({ session, onSwitch }: EditorProps) {
   }
 
   return (
-    <main className={docs ? 'wide' : undefined}>
-      <h1>Declarații fiscale ITL 002 și ITL 004</h1>
-      <p className="lead">
-        Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil și o
-        declarație ITL 004 pentru terenul aferent tuturor imobilelor.
-      </p>
-      <p className="note">Datele nu sunt trimise nicăieri: documentele sunt generate direct în browserul dumneavoastră.</p>
+    <>
+      <Header aria-label="Declarații fiscale ITL">
+        <SkipToContent />
+        <HeaderName href="./" prefix="DITL">
+          Declarații fiscale
+        </HeaderName>
+      </Header>
+      <Content id="main-content" className="page">
+        <Grid>
+          {/* Форма — узкой колонкой, результат с предпросмотром PDF — во всю ширину. */}
+          <Column sm={4} md={8} lg={docs ? 16 : { span: 10, offset: 3 }}>
+            <Stack gap={7}>
+            <div>
+              <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
+              <p className="lead">
+                Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil
+                și o declarație ITL 004 pentru terenul aferent tuturor imobilelor.
+              </p>
+            </div>
+            <InlineNotification
+              kind="info"
+              role="status"
+              lowContrast
+              hideCloseButton
+              title="Datele nu sunt trimise nicăieri:"
+              subtitle="documentele sunt generate direct în browserul dumneavoastră."
+            />
 
-      {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
+            {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
 
-      <FormProvider {...form}>
-        <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
-          {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
-          <DossierForm session={session} onSwitch={onSwitch} hidden={!!docs} onValid={onValid} error={error} setError={setError} />
-        </SectionsProvider>
-      </FormProvider>
+            <FormProvider {...form}>
+              <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
+                {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
+                <DossierForm session={session} onSwitch={onSwitch} hidden={!!docs} onValid={onValid} error={error} setError={setError} />
+              </SectionsProvider>
+            </FormProvider>
 
-      {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии,
-          а сборка раздаёт их файлами (src/typst/compiler.ts). */}
-      <footer className="note">
-        Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
-        <a href="LICENSE-Liberation.txt">SIL Open Font License 1.1</a>.
-      </footer>
-    </main>
+            {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
+                раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс. */}
+            <footer className="page-footer">
+              Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
+              <Link href="LICENSE-Liberation.txt" size="sm" inline>
+                SIL Open Font License 1.1
+              </Link>
+              . Fonturi IBM Plex © 2017 IBM Corp., sub licența{' '}
+              <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
+                SIL Open Font License 1.1
+              </Link>
+              .
+            </footer>
+            </Stack>
+          </Column>
+        </Grid>
+      </Content>
+    </>
   )
 }
 
@@ -107,32 +140,36 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
 
   return (
     <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate hidden={hidden}>
-      {debugEnabled && (
-        <div className="dev-tools">
-          {/* Тестовые данные — отдельным черновиком, текущий не затирается. */}
-          <button type="button" className="secondary" onClick={() => drafts.startNew(sampleDossier())}>
-            Completează cu date de test
-          </button>
+      <Stack gap={6}>
+        {debugEnabled && (
+          <div className="dev-tools">
+            {/* Тестовые данные — отдельным черновиком, текущий не затирается. */}
+            <Button kind="tertiary" size="sm" onClick={() => drafts.startNew(sampleDossier())}>
+              Completează cu date de test
+            </Button>
+          </div>
+        )}
+
+        <DraftsPanel drafts={drafts} />
+
+        <ProgressBar
+          label={`Secțiuni gata: ${sections.done} din ${sections.total}`}
+          value={sections.done}
+          max={sections.total}
+          status={sections.done === sections.total ? 'finished' : 'active'}
+          size="small"
+        />
+
+        <Fields />
+
+        {error && <InlineNotification kind="error" role="alert" lowContrast hideCloseButton title={error} />}
+
+        <div>
+          <Button type="submit" renderIcon={DocumentExport} disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Se pregătesc…' : 'Generează documentele'}
+          </Button>
         </div>
-      )}
-
-      <DraftsPanel drafts={drafts} />
-
-      <p className="progress" aria-live="polite">
-        Secțiuni gata: {sections.done} din {sections.total}
-      </p>
-
-      <Fields />
-
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? 'Se pregătesc…' : 'Generează documentele'}
-      </button>
+      </Stack>
     </form>
   )
 }

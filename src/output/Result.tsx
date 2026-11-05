@@ -1,3 +1,5 @@
+import { Button, CodeSnippet, ContainedList, ContainedListItem, InlineLoading, Select, SelectItem, Stack } from '@carbon/react'
+import { ArrowLeft, DocumentPdf, Download } from '@carbon/icons-react'
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import { downloadBlob } from './download'
 
@@ -30,77 +32,77 @@ export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => 
   const doc = docs[selected]!
   return (
     <section className="preview" aria-labelledby="result-heading">
-      <h2 id="result-heading" ref={heading} tabIndex={-1}>
-        Documentele sunt gata
-      </h2>
-      <p>
-        Fiecare fișier Typst conține datele și șablonul formularului. Îl puteți transforma în PDF pe calculatorul dumneavoastră:{' '}
-        <code>typst compile {docs[0]!.filename}.typ</code>
-      </p>
-      <ul className="documents">
-        {docs.map((d) => (
-          <li key={d.filename}>
-            <span className="document-label">{d.label}</span>
-            <button
-              type="button"
-              className="link"
-              aria-label={`Descarcă .typ: ${d.label}`}
-              onClick={() => downloadBlob(d.source, `${d.filename}.typ`, 'text/plain;charset=utf-8')}
+      <Stack gap={6}>
+        <div>
+          <h2 id="result-heading" className="preview-heading" ref={heading} tabIndex={-1}>
+            Documentele sunt gata
+          </h2>
+          <p>Fiecare fișier Typst conține datele și șablonul formularului. Îl puteți transforma în PDF pe calculatorul dumneavoastră:</p>
+        </div>
+        <CodeSnippet type="single" feedback="Copiat" aria-label="Comanda Typst" copyButtonDescription="Copiază comanda">
+          {`typst compile ${docs[0]!.filename}.typ`}
+        </CodeSnippet>
+        <ContainedList label="Fișiere Typst" kind="on-page">
+          {docs.map((d) => (
+            <ContainedListItem
+              key={d.filename}
+              action={
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  renderIcon={Download}
+                  aria-label={`Descarcă .typ: ${d.label}`}
+                  onClick={() => downloadBlob(d.source, `${d.filename}.typ`, 'text/plain;charset=utf-8')}
+                >
+                  {d.filename}.typ
+                </Button>
+              }
             >
-              {d.filename}.typ
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="actions">
-        <button type="button" className="secondary" onClick={onBack}>
-          Modifică datele
-        </button>
-      </div>
+              {d.label}
+            </ContainedListItem>
+          ))}
+        </ContainedList>
+        <div>
+          <Button kind="secondary" renderIcon={ArrowLeft} onClick={onBack}>
+            Modifică datele
+          </Button>
+        </div>
 
-      <h3>PDF în browser</h3>
-      {pdf ? (
-        <>
-          {docs.length > 1 && (
-            <div className="field">
-              <label htmlFor={selectId}>Documentul</label>
-              <select id={selectId} value={selected} onChange={(e) => setSelected(Number(e.target.value))}>
+        <h3 className="subheading">PDF în browser</h3>
+        {pdf ? (
+          <>
+            {docs.length > 1 && (
+              <Select id={selectId} labelText="Documentul" value={selected} onChange={(e) => setSelected(Number(e.target.value))}>
                 {docs.map((d, i) => (
-                  <option key={d.filename} value={i}>
-                    {d.label}
-                  </option>
+                  <SelectItem key={d.filename} value={i} text={d.label} />
                 ))}
-              </select>
+              </Select>
+            )}
+            <Suspense fallback={<InlineLoading status="active" description="Se încarcă compilatorul…" />}>
+              <PdfView key={doc.filename} source={doc.source} filename={doc.filename} />
+            </Suspense>
+          </>
+        ) : (
+          <>
+            <p className="note">
+              Pentru previzualizare și PDF, browserul descarcă o singură dată compilatorul Typst — aproximativ 11 MB; apoi îl ia din
+              cache. Datele rămân în browser.
+            </p>
+            <div>
+              <Button
+                kind="tertiary"
+                renderIcon={DocumentPdf}
+                onClick={() => {
+                  compilerAccepted = true
+                  setPdf(true)
+                }}
+              >
+                Încarcă compilatorul și generează PDF-urile
+              </Button>
             </div>
-          )}
-          <Suspense
-            fallback={
-              <p className="pdf-status" role="status">
-                <progress aria-label="Se încarcă compilatorul" /> Se încarcă compilatorul…
-              </p>
-            }
-          >
-            <PdfView key={doc.filename} source={doc.source} filename={doc.filename} />
-          </Suspense>
-        </>
-      ) : (
-        <>
-          <p className="note">
-            Pentru previzualizare și PDF, browserul descarcă o singură dată compilatorul Typst — aproximativ 11 MB; apoi
-            îl ia din cache. Datele rămân în browser.
-          </p>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              compilerAccepted = true
-              setPdf(true)
-            }}
-          >
-            Încarcă compilatorul și generează PDF-urile
-          </button>
-        </>
-      )}
+          </>
+        )}
+      </Stack>
     </section>
   )
 }

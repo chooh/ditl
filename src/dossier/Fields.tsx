@@ -1,3 +1,5 @@
+import { Accordion, AccordionItem, Button, FormGroup, Select, SelectItem } from '@carbon/react'
+import { Add, TrashCan } from '@carbon/icons-react'
 import { Fragment } from 'react'
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AddressFields, AttachmentsFields, ErrorText, RadioGroup, TextField } from '../form/fields'
@@ -18,7 +20,7 @@ import {
 /** Поля досье: фирма, подписант, акты, объекты и то, что относится ко всем декларациям. */
 export function Fields() {
   return (
-    <>
+    <Accordion size="lg">
       <Section id="company">
         <CompanySection />
       </Section>
@@ -50,7 +52,7 @@ export function Fields() {
       <Section id="signatures">
         <SignaturesSection />
       </Section>
-    </>
+    </Accordion>
   )
 }
 
@@ -70,14 +72,14 @@ function CompanySection() {
         <TextField name="company.bank.name" label="Deschis la" placeholder="Banca" wide autoComplete="off" />
       </div>
 
-      <h3>Sediul</h3>
+      <h2 className="subheading">Sediul</h2>
       <AddressFields
         prefix="company.seat"
         section="seat"
         fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality', 'county', 'country']}
       />
 
-      <h3>Adresa de corespondență</h3>
+      <h2 className="subheading">Adresa de corespondență</h2>
       <p className="hint">ITL 002. Completați doar dacă diferă de sediu.</p>
       <AddressFields
         prefix="company.correspondence"
@@ -85,7 +87,7 @@ function CompanySection() {
         fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality']}
       />
 
-      <h3>Adresa de rezidență în alt stat decât România</h3>
+      <h2 className="subheading">Adresa de rezidență în alt stat decât România</h2>
       <div className="grid">
         <TextField name="company.foreignResidence" label="Adresa (dacă este cazul)" wide autoComplete="off" />
       </div>
@@ -122,7 +124,7 @@ function SignatorySection() {
         <TextField name="signatory.email" label="Adresa de poștă electronică" type="email" wide autoComplete="section-signatory email" />
       </div>
 
-      <h3>Actul de identitate</h3>
+      <h2 className="subheading">Actul de identitate</h2>
       <div className="grid">
         <TextField name="signatory.idDocument.type" label="Tipul actului de identitate" list="id-types" autoComplete="off" />
         <TextField name="signatory.idDocument.series" label="Seria" autoComplete="off" />
@@ -137,7 +139,7 @@ function SignatorySection() {
         </datalist>
       </div>
 
-      <h3>Domiciliul</h3>
+      <h2 className="subheading">Domiciliul</h2>
       <AddressFields
         prefix="signatory.address"
         section="signatory"
@@ -175,24 +177,23 @@ function DeedsSection() {
         // field.id — ключ useFieldArray, а не id акта: тот берётся из значений.
         const used = properties.flatMap((p, j) => (p.deedId === deeds[i]?.id ? [j + 1] : []))
         return (
-          <fieldset key={field.id} className="parcel">
-            <legend>Actul {i + 1}</legend>
+          <FormGroup key={field.id} className="parcel" legendText={`Actul ${i + 1}`}>
             <DeedFields index={i} />
             {fields.length > 1 &&
               (used.length > 0 ? (
                 <p className="hint">Actul nu poate fi șters: este folosit de imobilul {used.join(', ')}.</p>
               ) : (
-                <button type="button" className="link" onClick={() => remove(i)}>
+                <Button kind="danger--ghost" size="sm" renderIcon={TrashCan} onClick={() => remove(i)}>
                   Șterge actul {i + 1}
-                </button>
+                </Button>
               ))}
-          </fieldset>
+          </FormGroup>
         )
       })}
       <ErrorText name="deeds" />
-      <button type="button" className="secondary" onClick={() => append(emptyDeed())}>
+      <Button kind="tertiary" renderIcon={Add} onClick={() => append(emptyDeed())}>
         Adaugă act
-      </button>
+      </Button>
     </>
   )
 }
@@ -213,7 +214,7 @@ function DeedFields({ index: i }: { index: number }) {
           <TextField name={`${p}.formOther`} label="Alte modalități — precizați" wide autoComplete="off" />
         </div>
       )}
-      <h3>Documente anexate pentru acest act</h3>
+      <h2 className="subheading">Documente anexate pentru acest act</h2>
       <AttachmentsFields name={`${p}.attachments`} label={`Actul ${i + 1}`} />
     </>
   )
@@ -229,28 +230,27 @@ function PropertiesSection() {
         declarație ITL 004.
       </p>
       {fields.map((field, i) => (
-        <fieldset key={field.id} className="parcel">
-          <legend>Imobilul {i + 1}</legend>
+        <FormGroup key={field.id} className="parcel" legendText={`Imobilul ${i + 1}`}>
           <PropertyFields index={i} />
           {fields.length > 1 && (
-            <button type="button" className="link" onClick={() => remove(i)}>
+            <Button kind="danger--ghost" size="sm" renderIcon={TrashCan} onClick={() => remove(i)}>
               Șterge imobilul {i + 1}
-            </button>
+            </Button>
           )}
-        </fieldset>
+        </FormGroup>
       ))}
       <ErrorText name="properties" />
       <p className="hint">Imobilul nou preia actul și adresa clădirii de la imobilul anterior.</p>
-      <button
-        type="button"
-        className="secondary"
+      <Button
+        kind="tertiary"
+        renderIcon={Add}
         onClick={() => {
           const { properties, deeds } = getValues()
           append(nextProperty(properties.at(-1), deeds.at(-1)?.id ?? ''))
         }}
       >
         Adaugă imobil
-      </button>
+      </Button>
     </>
   )
 }
@@ -261,7 +261,7 @@ function PropertyFields({ index: i }: { index: number }) {
     <>
       <DeedSelect index={i} />
 
-      <h3>Adresa</h3>
+      <h2 className="subheading">Adresa</h2>
       <div className="grid">
         <TextField name={`${p}.address.street`} label="Strada" wide autoComplete="off" />
         <TextField name={`${p}.address.number`} label="Nr." autoComplete="off" />
@@ -273,13 +273,13 @@ function PropertyFields({ index: i }: { index: number }) {
         <TextField name={`${p}.address.district`} label="Satul / sectorul" placeholder="ex. Sector 2" autoComplete="off" />
       </div>
 
-      <h3>Clădirea (ITL 002)</h3>
+      <h2 className="subheading">Clădirea (ITL 002)</h2>
       <BuildingFields index={i} />
 
-      <h3>Terenul aferent (ITL 004)</h3>
+      <h2 className="subheading">Terenul aferent (ITL 004)</h2>
       <LandFields index={i} />
 
-      <h3>Registrul agricol (dacă este cazul)</h3>
+      <h2 className="subheading">Registrul agricol (dacă este cazul)</h2>
       <div className="grid">
         <TextField name={`${p}.agriculturalRegister.period`} label="Perioada" placeholder="ex. 2020–2024" autoComplete="off" />
         <TextField name={`${p}.agriculturalRegister.type`} label="Tipul" autoComplete="off" />
@@ -287,7 +287,7 @@ function PropertyFields({ index: i }: { index: number }) {
         <TextField name={`${p}.agriculturalRegister.position`} label="Poziția nr." autoComplete="off" />
       </div>
 
-      <h3>Documente anexate pentru acest imobil</h3>
+      <h2 className="subheading">Documente anexate pentru acest imobil</h2>
       <AttachmentsFields name={`${p}.attachments`} label={`Imobilul ${i + 1}`} />
     </>
   )
@@ -295,23 +295,18 @@ function PropertyFields({ index: i }: { index: number }) {
 
 /** Акт, по которому получен объект: номер, дата и форма приобретения берутся из него. */
 function DeedSelect({ index: i }: { index: number }) {
-  const { register } = useFormContext<DossierInput>()
+  const { register, getFieldState, formState } = useFormContext<DossierInput>()
   const deeds = useWatch<DossierInput, 'deeds'>({ name: 'deeds' })
   const name = `properties.${i}.deedId` as const
+  const error = getFieldState(name, formState).error?.message
   const id = `deed-select-${i}`
   return (
     <div className="grid">
-      <div className="field wide">
-        <label htmlFor={id}>Dobândit prin</label>
-        <select id={id} {...register(name)}>
-          {deeds.map((deed, j) => (
-            <option key={deed.id} value={deed.id}>
-              {deedLabel(deed, j)}
-            </option>
-          ))}
-        </select>
-        <ErrorText name={name} />
-      </div>
+      <Select id={id} className="wide" labelText="Dobândit prin" {...register(name)} invalid={!!error} invalidText={error}>
+        {deeds.map((deed, j) => (
+          <SelectItem key={deed.id} value={deed.id} text={deedLabel(deed, j)} />
+        ))}
+      </Select>
     </div>
   )
 }
@@ -423,14 +418,15 @@ function LandFields({ index: i }: { index: number }) {
         <TextField name={`${p}.rank`} label="Rangul localității" placeholder="București: 0" autoComplete="off" />
         <TextField name={`${p}.zone`} label="Zona" placeholder="A–D" autoComplete="off" />
       </div>
-      <details className="categories" open={otherFilled || undefined}>
-        <summary>Alte categorii de folosință (m²)</summary>
-        <div className="grid">
-          {OTHER_CATEGORIES.map((k) => (
-            <TextField key={k} name={`${p}.areas.${k}`} label={CATEGORY_LABELS[k]} inputMode="decimal" autoComplete="off" />
-          ))}
-        </div>
-      </details>
+      <Accordion className="categories">
+        <AccordionItem title="Alte categorii de folosință (m²)" open={otherFilled}>
+          <div className="grid">
+            {OTHER_CATEGORIES.map((k) => (
+              <TextField key={k} name={`${p}.areas.${k}`} label={CATEGORY_LABELS[k]} inputMode="decimal" autoComplete="off" />
+            ))}
+          </div>
+        </AccordionItem>
+      </Accordion>
       <ErrorText name={`${p}.areas`} />
     </>
   )

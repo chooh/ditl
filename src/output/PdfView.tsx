@@ -1,3 +1,5 @@
+import { Button, InlineLoading, InlineNotification, Link } from '@carbon/react'
+import { Download, Renew } from '@carbon/icons-react'
 import { useEffect, useState } from 'react'
 import { compilePdf, TypstError } from '../typst/compiler'
 import { downloadUrl } from './download'
@@ -39,23 +41,17 @@ export default function PdfView({ source, filename }: { source: string; filename
   }, [source, attempt])
 
   if (state.step === 'compiling') {
-    return (
-      <p className="pdf-status" role="status">
-        <progress aria-label="Se generează PDF-ul" /> Se încarcă compilatorul și se generează PDF-ul…
-      </p>
-    )
+    return <InlineLoading status="active" description="Se încarcă compilatorul și se generează PDF-ul…" />
   }
 
   if (state.step === 'error') {
     return (
-      <div className="pdf-status">
-        <p className="error" role="alert">
-          {state.message}
-        </p>
+      <div>
+        <InlineNotification kind="error" role="alert" lowContrast hideCloseButton title={state.message} />
         {state.details && <pre className="diagnostics">{state.details}</pre>}
-        <button type="button" className="secondary" onClick={() => setAttempt((n) => n + 1)}>
+        <Button kind="tertiary" renderIcon={Renew} onClick={() => setAttempt((n) => n + 1)}>
           Încearcă din nou
-        </button>
+        </Button>
       </div>
     )
   }
@@ -65,14 +61,14 @@ export default function PdfView({ source, filename }: { source: string; filename
       <iframe src={state.url} title="Previzualizare PDF" />
       <p className="note">
         Nu se afișează (de exemplu, pe telefon)?{' '}
-        <a href={state.url} target="_blank" rel="noopener">
+        <Link href={state.url} target="_blank" rel="noopener" size="sm" inline>
           Deschide într-o filă nouă
-        </a>
+        </Link>
       </p>
-      <div className="actions">
-        <button type="button" onClick={() => downloadUrl(state.url, `${filename}.pdf`)}>
+      <div>
+        <Button renderIcon={Download} onClick={() => downloadUrl(state.url, `${filename}.pdf`)}>
           Descarcă PDF
-        </button>
+        </Button>
       </div>
     </>
   )
