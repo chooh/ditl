@@ -20,7 +20,15 @@ export type Session = {
   draft?: Draft
   /** Значения нового досье без черновика (например, данные той же фирмы); сразу сохраняются. */
   initial?: DossierInput
+  /** Разделы `initial`, уже подтверждённые пользователем. */
+  confirmed?: string[]
 }
+
+/** Разделы, которые «Dosar nou pentru aceeași firmă» переносит целиком. */
+const SAME_COMPANY_SECTIONS = ['company', 'signatory']
+
+/** Что сохраняется в черновик: по этому снимку видно, есть ли несохранённые изменения. */
+const snapshot = (values: DossierInput, confirmed: string[]) => JSON.stringify({ values, confirmed })
 
 export type DraftsApi = ReturnType<typeof useDrafts>
 
@@ -36,7 +44,10 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
   const [activeId, setActiveId] = useState(session.draft?.id)
   const [status, setStatus] = useState<Status>({ savedAt: session.draft?.updatedAt })
   const active = useRef(session.draft?.id)
-  const lastSaved = useRef(session.draft && JSON.stringify(session.draft.values))
+  const lastSaved = useRef(session.draft && snapshot(session.draft.values, session.draft.confirmed))
+  // flush вызывается из подписок и при размонтировании — берёт свежие отметки отсюда.
+  const confirmed = useRef(sections.confirmed)
+  confirmed.current = sections.confirmed
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   /** Открытый черновик удалён: форма вот-вот пересоздастся, сохранять больше нечего. */
   const detached = useRef(false)
@@ -45,10 +56,10 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     clearTimeout(timer.current)
     timer.current = undefined
     const values = getValues()
-    const json = JSON.stringify(values)
+    const json = snapshot(values, confirmed.current)
     if (detached.current || json === lastSaved.current || (!active.current && isBlank(values))) return
     try {
-      const draft = saveDraft(active.current, values)
+      const draft = saveDraft(active.current, values, confirmed.current)
       lastSaved.current = json
       active.current = draft.id
       setActiveId(draft.id)
@@ -80,13 +91,19 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     }
   }, [watch, flush])
 
-  // Открытый черновик или перенесённые данные: открыт первый незаконченный раздел
+  // Открытый черновик или перенесённые данные: открыт первый неготовый раздел
   // (или проверка, если готово всё), новые данные сразу сохранены.
   useLayoutEffect(() => {
     const loaded = session.draft?.values ?? session.initial
-    if (loaded && !isBlank(loaded)) sections.resume(loaded)
+    if (loaded && !isBlank(loaded)) sections.resume(loaded, session.draft?.confirmed ?? session.confirmed ?? [])
     if (session.initial) flush()
   }, []) // только при монтировании
+
+  // Подтверждение раздела «Continuă» значения не меняет — сохранить его отдельно.
+  const confirmedKey = sections.confirmed.join()
+  useEffect(() => {
+    if (confirmedKey) flush()
+  }, [confirmedKey, flush])
 
   const open = (id: string) => {
     flush()
@@ -96,15 +113,19 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     onSwitch({ draft })
   }
 
-  /** Новое досье; `initial` — значения, с которых оно начинается. */
-  const startNew = (initial?: DossierInput) => {
+  /** Новое досье; `initial` — значения, с которых оно начинается, `confirmed` — уже подтверждённые разделы. */
+  const startNew = (initial?: DossierInput, confirmed?: string[]) => {
     flush()
     setActiveDraft(undefined)
-    onSwitch({ initial })
+    onSwitch({ initial, confirmed })
   }
 
   /** Новое досье той же фирмы: реквизиты и подписант переносятся, акты и объекты — нет. */
-  const startForSameCompany = () => startNew(forSameCompany(getValues()))
+  const startForSameCompany = () =>
+    startNew(
+      forSameCompany(getValues()),
+      sections.confirmed.filter((id) => SAME_COMPANY_SECTIONS.includes(id)),
+    )
 
   const remove = (id: string) => {
     const draft = list.find((d) => d.id === id)

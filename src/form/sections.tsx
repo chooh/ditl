@@ -6,7 +6,9 @@ import type { ZodType } from 'zod'
 /**
  * Разделы формы-мастера: на экране один раздел, рядом — шаги со статусами (wizard.tsx),
  * последний шаг — проверка всего досье. Порядок заполнения не навязывается: на любой
- * шаг можно перейти, а уходя с раздела, пользователь видит его ошибки.
+ * шаг можно перейти, а уходя с раздела, пользователь видит его ошибки. Готовым раздел
+ * считается, только когда в нём нет ошибок и пользователь подтвердил его кнопкой «Continuă»:
+ * разделы без обязательных полей (скидки, приложения) иначе были бы «готовы» сразу.
  */
 export type SectionDef<V> = {
   id: string
@@ -31,6 +33,8 @@ export type SectionState = {
   issues: number
   /** Пользователь уже уходил с раздела — только тогда показываем количество ошибок. */
   visited: boolean
+  /** Пользователь нажал в разделе «Continuă». */
+  confirmed: boolean
   summary: string
 }
 
@@ -44,12 +48,16 @@ type SectionsApi = {
   next: string | undefined
   /** Перейти к шагу. Покинутый раздел проверяется: его ошибки видны в полях и в индикаторе. */
   go(id: string): void
+  /** «Continuă»: подтвердить открытый раздел и перейти к следующему шагу. */
+  advance(): void
+  /** Подтверждённые разделы — сохраняются в черновике вместе со значениями. */
+  confirmed: string[]
   /** Растёт при переходе по шагам — по нему заголовок шага получает фокус. */
   navigation: number
   /** Открыть первый раздел, к которому относятся ключи верхнего уровня (например, из ошибок формы). */
   openForKeys(keys: string[]): void
-  /** Для только что загруженных значений: открыть первый незаконченный раздел или проверку. */
-  resume(values: unknown): void
+  /** Для только что загруженных значений: открыть первый неготовый раздел или проверку. */
+  resume(values: unknown, confirmed: readonly string[]): void
   done: number
   total: number
 }
@@ -83,6 +91,7 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   const [current, setCurrent] = useState(allIds[0]!)
   const [navigation, setNavigation] = useState(0)
   const [visited, setVisited] = useState(() => byId(allIds, false))
+  const [confirmed, setConfirmed] = useState(() => byId(allIds, false))
 
   const countIssues = (v: unknown) => {
     const issues = byId(allIds, 0)
@@ -98,26 +107,36 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   const section = (id: string) => sections.find((s) => s.id === id)!
   const get = (id: string): SectionState => {
     const s = section(id)
-    return { id, title: s.title, step: s.step, issues: issues[id]!, visited: visited[id]!, summary: s.summary(values) }
+    return { id, title: s.title, step: s.step, issues: issues[id]!, visited: visited[id]!, confirmed: confirmed[id]!, summary: s.summary(values) }
   }
+  const list = allIds.map(get)
   const index = steps.indexOf(current)
 
+  const go = (id: string) => {
+    if (id === current) return
+    if (current !== REVIEW) {
+      setVisited((m) => ({ ...m, [current]: true }))
+      // Показать ошибки покинутого раздела в его полях — к ним вернутся по индикатору.
+      void trigger([...section(current).keys])
+    }
+    setCurrent(id)
+    setNavigation((n) => n + 1)
+  }
+
   const api: SectionsApi = {
-    list: allIds.map(get),
+    list,
     get,
     current,
     prev: steps[index - 1],
     next: steps[index + 1],
-    go: (id) => {
-      if (id === current) return
-      if (current !== REVIEW) {
-        setVisited((m) => ({ ...m, [current]: true }))
-        // Показать ошибки покинутого раздела в его полях — к ним вернутся по индикатору.
-        void trigger([...section(current).keys])
-      }
-      setCurrent(id)
-      setNavigation((n) => n + 1)
+    go,
+    advance: () => {
+      const next = steps[index + 1]
+      if (!next) return
+      if (current !== REVIEW) setConfirmed((m) => ({ ...m, [current]: true }))
+      go(next)
     },
+    confirmed: allIds.filter((id) => confirmed[id]),
     navigation,
     openForKeys: (keys) => {
       const ids = new Set(keys.map((k) => sectionOfKey.get(k)))
@@ -125,12 +144,15 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
       setVisited((m) => ({ ...m, ...byId([...ids].filter((id): id is string => !!id), true) }))
       if (first) setCurrent(first)
     },
-    resume: (loaded) => {
+    resume: (loaded, ids) => {
       const loadedIssues = countIssues(loaded)
-      setCurrent(allIds.find((id) => loadedIssues[id]! > 0) ?? REVIEW)
-      setVisited(byId(allIds, false))
+      const restored = { ...byId(allIds, false), ...byId(ids.filter((id) => allIds.includes(id)), true) }
+      setCurrent(allIds.find((id) => loadedIssues[id]! > 0 || !restored[id]) ?? REVIEW)
+      // Подтверждённый раздел пользователь уже покидал — его ошибки видны сразу.
+      setVisited(restored)
+      setConfirmed(restored)
     },
-    done: allIds.filter((id) => issues[id] === 0).length,
+    done: list.filter((s) => statusOf(s) === 'done').length,
     total: allIds.length,
   }
 
@@ -139,7 +161,8 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
 
 export type Status = 'done' | 'error' | 'todo'
 
-export const statusOf = ({ issues, visited }: SectionState): Status => (issues === 0 ? 'done' : visited ? 'error' : 'todo')
+export const statusOf = ({ issues, visited, confirmed }: SectionState): Status =>
+  issues > 0 ? (visited ? 'error' : 'todo') : confirmed ? 'done' : 'todo'
 
 export const issuesText = (issues: number) => (issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat`)
 

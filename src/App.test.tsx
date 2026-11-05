@@ -47,7 +47,21 @@ describe('мастер', () => {
     expect(currentStep()).toBe('Contribuabilul (persoana juridică)')
     expect(step('Contribuabil').getAttribute('aria-current')).toBe('step')
     expect(stepStatus('Imobile')).toBe('Imobile: de completat')
-    expect(stepStatus('Scutiri')).toBe('Scutiri: gata')
+    // Без ошибок, но не подтверждён — ещё не готов.
+    expect(stepStatus('Scutiri')).toBe('Scutiri: de completat')
+    expect(stepStatus('Semnături')).toBe('Semnături: de completat')
+  })
+
+  it('раздел без ошибок готов только после «Continuă», переход по индикатору не в счёт', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await goTo(user, 'Scutiri')
+    await goTo(user, 'Anexe')
+    expect(stepStatus('Scutiri')).toBe('Scutiri: de completat')
+
+    await user.click(screen.getByRole('button', { name: 'Continuă: Semnături' }))
+    expect(stepStatus('Anexe')).toBe('Anexe: gata')
+    expect(stepStatus('Scutiri')).toBe('Scutiri: de completat')
   })
 
   it('«Continuă» открывает следующий шаг и показывает ошибки покинутого', async () => {
@@ -170,6 +184,20 @@ describe('черновики', () => {
 
     expect(input('Denumire contribuabil').value).toBe('Exemplu SRL')
     expect(screen.getByText(/Ciornă salvată automat/)).toBeTruthy()
+  })
+
+  it('подтверждённые разделы переживают перезагрузку', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('Denumire contribuabil'), 'Exemplu SRL')
+    await goTo(user, 'Scutiri')
+    await user.click(screen.getByRole('button', { name: 'Continuă: Anexe' }))
+    reload()
+
+    expect(stepStatus('Scutiri')).toBe('Scutiri: gata')
+    expect(stepStatus('Anexe')).toBe('Anexe: de completat')
+    // Открыт первый неготовый раздел.
+    expect(currentStep()).toBe('Contribuabilul (persoana juridică)')
   })
 
   it('пустая форма черновик не создаёт', () => {

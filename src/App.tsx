@@ -143,8 +143,8 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
       <Stack gap={6}>
         {debugEnabled && (
           <div className="dev-tools">
-            {/* Тестовые данные — отдельным черновиком, текущий не затирается. */}
-            <Button kind="tertiary" size="sm" onClick={() => drafts.startNew(sampleDossier())}>
+            {/* Тестовые данные — отдельным черновиком, текущий не затирается; все разделы подтверждены. */}
+            <Button kind="tertiary" size="sm" onClick={() => drafts.startNew(sampleDossier(), SECTIONS.map((s) => s.id))}>
               Completează cu date de test
             </Button>
           </div>

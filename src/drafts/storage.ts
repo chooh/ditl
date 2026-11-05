@@ -16,6 +16,8 @@ export type Draft = {
   updatedAt: number
   /** Значения формы. */
   values: DossierInput
+  /** Разделы, подтверждённые кнопкой «Continuă». */
+  confirmed: string[]
 }
 
 type Store = {
@@ -33,7 +35,11 @@ function read(): Store {
     if (!raw || !Array.isArray(raw.drafts)) return { drafts: [] }
     const drafts = raw.drafts
       .filter((d): d is Draft => !!d && typeof d.id === 'string' && typeof d.updatedAt === 'number')
-      .map((d) => ({ ...d, values: withDefaults(emptyDossier(), d.values) }))
+      .map((d) => ({
+        ...d,
+        values: withDefaults(emptyDossier(), d.values),
+        confirmed: Array.isArray(d.confirmed) ? d.confirmed.filter((id) => typeof id === 'string') : [],
+      }))
     return { activeId: typeof raw.activeId === 'string' ? raw.activeId : undefined, drafts }
   } catch {
     // Повреждённые данные или запрещённый доступ к хранилищу — начинаем с чистого листа.
@@ -74,9 +80,9 @@ export function setActiveDraft(id: string | undefined) {
 }
 
 /** Сохранить значения формы; без `id` создаётся новый черновик. Черновик становится активным. */
-export function saveDraft(id: string | undefined, values: DossierInput): Draft {
+export function saveDraft(id: string | undefined, values: DossierInput, confirmed: string[] = []): Draft {
   const store = read()
-  const draft: Draft = { id: id ?? newId(), updatedAt: Date.now(), values }
+  const draft: Draft = { id: id ?? newId(), updatedAt: Date.now(), values, confirmed }
   write({ activeId: draft.id, drafts: [...store.drafts.filter((d) => d.id !== draft.id), draft] })
   return draft
 }

@@ -85,7 +85,7 @@ const stepName = (id: string, list: SectionState[]) => (id === REVIEW ? REVIEW_S
 
 /** «Înapoi» и «Continuă» под разделом; на последнем шаге вместо «Continuă» — `last` (отправка формы). */
 export function StepButtons({ last }: { last: ReactNode }) {
-  const { prev, next, list, go } = useSections()
+  const { prev, next, list, go, advance } = useSections()
   return (
     <div className="wizard-buttons">
       {prev && (
@@ -94,7 +94,7 @@ export function StepButtons({ last }: { last: ReactNode }) {
         </Button>
       )}
       {next ? (
-        <Button kind="primary" size="lg" renderIcon={ArrowRight} onClick={() => go(next)}>
+        <Button kind="primary" size="lg" renderIcon={ArrowRight} onClick={advance}>
           Continuă: {stepName(next, list)}
         </Button>
       ) : (
