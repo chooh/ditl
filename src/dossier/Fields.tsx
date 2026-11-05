@@ -278,14 +278,6 @@ function PropertyFields({ index: i }: { index: number }) {
       <h3 className="subheading">Terenul aferent (ITL 004)</h3>
       <LandFields index={i} />
 
-      <h3 className="subheading">Registrul agricol (dacă este cazul)</h3>
-      <div className="grid">
-        <TextField name={`${p}.agriculturalRegister.period`} label="Perioada" placeholder="ex. 2020–2024" autoComplete="off" />
-        <TextField name={`${p}.agriculturalRegister.type`} label="Tipul" autoComplete="off" />
-        <TextField name={`${p}.agriculturalRegister.volume`} label="Volumul" autoComplete="off" />
-        <TextField name={`${p}.agriculturalRegister.position`} label="Poziția nr." autoComplete="off" />
-      </div>
-
       <h3 className="subheading">Documente anexate pentru acest imobil</h3>
       <AttachmentsFields name={`${p}.attachments`} label={`Imobilul ${i + 1}`} />
     </>

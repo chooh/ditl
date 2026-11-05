@@ -10,7 +10,6 @@ function property(
   deedId: string,
   patch: {
     address: Partial<PropertyInput['address']>
-    agriculturalRegister?: PropertyInput['agriculturalRegister']
     building: Partial<PropertyInput['building']>
     land: Partial<Omit<Land, 'areas'>> & { areas: Partial<Land['areas']> }
     attachments?: string[]
@@ -20,7 +19,6 @@ function property(
   return {
     ...base,
     address: { ...base.address, ...patch.address },
-    agriculturalRegister: patch.agriculturalRegister ?? base.agriculturalRegister,
     building: { ...base.building, ...patch.building },
     land: { ...base.land, ...patch.land, areas: { ...base.land.areas, ...patch.land.areas } },
     attachments: patch.attachments ? names(...patch.attachments) : base.attachments,
@@ -106,7 +104,6 @@ export function sampleDossier(): DossierInput {
     properties: [
       property('deed-1', {
         address: { ...mihaiBravu, floor: '5', apartment: '18' },
-        agriculturalRegister: { period: '2020–2024', type: 'II', volume: '12', position: '345' },
         building: {
           type: 'mixed',
           purchaseValue: '1.250.000,00',

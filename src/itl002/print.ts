@@ -47,11 +47,12 @@ export function toPrintData(d: Dossier, index: number) {
 
   return {
     antet: {
-      // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
+      // Rol nominal unic и позицию в registrul agricol вписывает налоговый орган —
+      // графы на бланке остаются пустыми.
       rolNominal: '',
-      registruTip: p.agriculturalRegister.type,
-      registruVolum: p.agriculturalRegister.volume,
-      registruPozitie: p.agriculturalRegister.position,
+      registruTip: '',
+      registruVolum: '',
+      registruPozitie: '',
     },
     contribuabil: {
       denumire: c.name,

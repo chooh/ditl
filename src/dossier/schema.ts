@@ -133,12 +133,6 @@ const propertyAddress = z.object({
 const property = z.object({
   deedId: z.string(), // по какому акту получен
   address: propertyAddress,
-  agriculturalRegister: z.object({
-    period: text(15), // registrul agricol 20.. / 20..
-    type: text(10), // tipul
-    volume: text(10), // volumul
-    position: text(20), // poziția
-  }),
   building: z.object({
     type: choice(BUILDING_TYPES, 'Alegeți tipul clădirii'), // nerezidențială / rezidențială / mixtă
     purchaseValue: money, // valoare achiziție (lei)
@@ -274,7 +268,6 @@ export function emptyProperty(deedId: string): PropertyInput {
   return {
     deedId,
     address: { street: '', number: '', block: '', entrance: '', floor: '', apartment: '', locality: '', district: '' },
-    agriculturalRegister: { period: '', type: '', volume: '', position: '' },
     building: {
       type: '',
       purchaseValue: '',
