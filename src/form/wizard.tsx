@@ -1,4 +1,4 @@
-import { Button, ContainedList, ContainedListItem, ProgressIndicator, ProgressStep, Select, SelectItem } from '@carbon/react'
+import { Button, ButtonSet, ContainedList, ContainedListItem, ProgressIndicator, ProgressStep, Select, SelectItem } from '@carbon/react'
 import { ArrowLeft, ArrowRight, Edit } from '@carbon/icons-react'
 import { useId, type ReactNode } from 'react'
 import { issuesText, REVIEW, StatusTag, StepPanel, statusOf, useSections, type SectionState } from './sections'
@@ -83,11 +83,14 @@ export function StepIndicator() {
 
 const stepName = (id: string, list: SectionState[]) => (id === REVIEW ? REVIEW_STEP : list.find((s) => s.id === id)!.step)
 
-/** «Înapoi» и «Continuă» под разделом; на последнем шаге вместо «Continuă» — `last` (отправка формы). */
+/**
+ * «Înapoi» и «Continuă» под разделом; на последнем шаге вместо «Continuă» — `last` (отправка формы).
+ * Fluid ButtonSet сам встаёт столбиком в узком контейнере и поднимает основную кнопку наверх.
+ */
 export function StepButtons({ last }: { last: ReactNode }) {
   const { prev, next, list, go, advance } = useSections()
   return (
-    <div className="wizard-buttons">
+    <ButtonSet fluid className="wizard-buttons">
       {prev && (
         <Button kind="secondary" size="lg" renderIcon={ArrowLeft} onClick={() => go(prev)}>
           Înapoi
@@ -100,7 +103,7 @@ export function StepButtons({ last }: { last: ReactNode }) {
       ) : (
         last
       )}
-    </div>
+    </ButtonSet>
   )
 }
 

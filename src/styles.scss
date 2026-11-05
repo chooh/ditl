@@ -168,16 +168,16 @@ body {
   }
 }
 
+// Fluid ButtonSet встаёт столбиком при 176px на кнопку, а «Continuă: Contribuabil»
+// влезает лишь в ~232px — переносим раньше, пока две кнопки не помещаются по максимуму.
 .wizard-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-03;
   padding-block-start: $spacing-05;
   border-block-start: 1px solid theme.$border-subtle;
 
-  // Основное действие — справа, даже когда «Înapoi» нет.
-  > :last-child {
-    margin-inline-start: auto;
+  @container (width <= 29rem) {
+    .cds--btn-set__fluid-inner--auto-stack:has(:nth-child(2):last-child) {
+      @include button.button-set-fluid-column;
+    }
   }
 }
 
