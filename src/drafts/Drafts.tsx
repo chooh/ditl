@@ -214,32 +214,28 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
         <ContainedList label="Ciornele mele" kind="on-page" size="md">
           {list.map((d) => {
             const title = draftTitle(d)
+            const active = d.id === activeId
             return (
+              // Неактивный черновик открывается кликом по строке.
               <ContainedListItem
                 key={d.id}
+                onClick={active ? undefined : () => drafts.open(d.id)}
                 action={
-                  <div className="actions">
-                    {d.id === activeId ? (
-                      <span className="draft-time">deschisă</span>
-                    ) : (
-                      <Button kind="ghost" size="sm" onClick={() => drafts.open(d.id)} aria-label={`Deschide ciorna ${title}`}>
-                        Deschide
-                      </Button>
-                    )}
-                    <Button
-                      kind="danger--ghost"
-                      size="sm"
-                      renderIcon={TrashCan}
-                      onClick={() => drafts.remove(d.id)}
-                      aria-label={`Șterge ciorna ${title}`}
-                    >
-                      Șterge
-                    </Button>
-                  </div>
+                  <Button
+                    kind="ghost"
+                    hasIconOnly
+                    renderIcon={TrashCan}
+                    iconDescription={`Șterge ciorna ${title}`}
+                    tooltipAlignment="end"
+                    onClick={() => drafts.remove(d.id)}
+                  />
                 }
               >
                 {title}
-                <span className="draft-time">{formatSavedAt(d.updatedAt)}</span>
+                <span className="item-secondary">
+                  {active ? 'deschisă · ' : ''}
+                  {formatSavedAt(d.updatedAt)}
+                </span>
               </ContainedListItem>
             )
           })}

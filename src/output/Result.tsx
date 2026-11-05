@@ -49,16 +49,16 @@ export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => 
               action={
                 <Button
                   kind="ghost"
-                  size="sm"
+                  hasIconOnly
                   renderIcon={Download}
-                  aria-label={`Descarcă .typ: ${d.label}`}
+                  iconDescription={`Descarcă ${d.filename}.typ`}
+                  tooltipAlignment="end"
                   onClick={() => downloadBlob(d.source, `${d.filename}.typ`, 'text/plain;charset=utf-8')}
-                >
-                  {d.filename}.typ
-                </Button>
+                />
               }
             >
               {d.label}
+              <span className="item-secondary">{d.filename}.typ</span>
             </ContainedListItem>
           ))}
         </ContainedList>

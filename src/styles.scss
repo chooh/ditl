@@ -181,6 +181,15 @@ body {
   }
 }
 
+// ── Списки ──
+// Вторая строка элемента ContainedList: имя файла, сводка раздела, время.
+.item-secondary {
+  @include type.type-style('helper-text-01');
+  display: block;
+  margin-block-start: $spacing-02;
+  color: theme.$text-secondary;
+}
+
 // ── Проверка ──
 .review-heading {
   display: flex;
@@ -191,13 +200,6 @@ body {
 
 .review-title {
   @include type.type-style('heading-compact-01');
-}
-
-.review-summary {
-  @include type.type-style('helper-text-01');
-  display: block;
-  margin-block-start: $spacing-02;
-  color: theme.$text-secondary;
 }
 
 // Поля формы не должны упираться в правый край, как текст аккордеона.
@@ -265,13 +267,6 @@ body {
 
 .categories {
   margin-block-end: $spacing-05;
-}
-
-// ── Черновики ──
-.draft-time {
-  @include type.type-style('helper-text-01');
-  margin-inline-start: $spacing-04;
-  color: theme.$text-secondary;
 }
 
 // ── Результат ──

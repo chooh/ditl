@@ -182,7 +182,8 @@ describe('акты и объекты', () => {
     await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
     await screen.findByRole('heading', { name: 'Documentele sunt gata' })
 
-    await user.click(screen.getByRole('button', { name: /Descarcă \.typ: ITL 002 — Str\. Fabrica de Glucoză/ }))
+    const item = screen.getByText(/ITL 002 — Str\. Fabrica de Glucoză/).closest('li')!
+    await user.click(within(item).getByRole('button', { name: /^Descarcă / }))
     const source = await blobs.at(-1)!.text()
     expect(source).toContain('nrAct: "89/2025"')
     expect(source).toContain('formaDobandire: "inchiriere"')
@@ -248,7 +249,7 @@ describe('черновики', () => {
     expect(input('Denumire contribuabil').value).toBe('A doua SRL')
 
     await user.click(screen.getByRole('button', { name: 'Ciornele mele (2)' }))
-    await user.click(screen.getByRole('button', { name: 'Deschide ciorna Prima SRL' }))
+    await user.click(screen.getByRole('button', { name: /^Prima SRL/ }))
     expect(input('Denumire contribuabil').value).toBe('Prima SRL')
   })
 
@@ -290,11 +291,11 @@ describe('документы', () => {
     await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
 
     await screen.findByRole('heading', { name: 'Documentele sunt gata' })
-    const files = within(screen.getByRole('list')).getAllByRole('button').map((b) => b.textContent)
+    const files = within(screen.getByRole('list')).getAllByText(/^ITL\d+_.*\.typ$/).map((f) => f.textContent)
     expect(files).toEqual(['ITL002_18547290_1.typ', 'ITL002_18547290_2.typ', 'ITL002_18547290_3.typ', 'ITL004_18547290.typ'])
     expect(screen.getByRole('button', { name: 'Încarcă compilatorul și generează PDF-urile' })).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: 'Descarcă .typ: ITL 004 — teren, 3 imobile' }))
+    await user.click(screen.getByRole('button', { name: 'Descarcă ITL004_18547290.typ' }))
     const source = await blobs.at(-1)!.text()
     expect(source).toMatch(/^\/\/ Declarație fiscală ITL 004/)
     expect(source).toContain('denumire: "Exemplu Construcții Țărănești S.R.L."')

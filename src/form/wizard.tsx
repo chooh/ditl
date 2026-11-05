@@ -120,16 +120,21 @@ export function Review() {
           <ContainedListItem
             key={s.id}
             action={
-              <Button kind="ghost" size="sm" renderIcon={Edit} onClick={() => go(s.id)} aria-label={`Modifică: ${s.title}`}>
-                Modifică
-              </Button>
+              <Button
+                kind="ghost"
+                hasIconOnly
+                renderIcon={Edit}
+                iconDescription={`Modifică: ${s.title}`}
+                tooltipAlignment="end"
+                onClick={() => go(s.id)}
+              />
             }
           >
             <span className="review-heading">
               <span className="review-title">{s.title}</span>
               <StatusTag section={s} />
             </span>
-            {s.summary && <span className="review-summary">{s.summary}</span>}
+            {s.summary && <span className="item-secondary">{s.summary}</span>}
           </ContainedListItem>
         ))}
       </ContainedList>
