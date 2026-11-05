@@ -62,7 +62,6 @@ function CompanySection() {
       <div className="grid">
         <TextField name="company.name" label="Denumire contribuabil" wide autoComplete="organization" />
         <TextField name="company.taxId" label="Cod de identificare fiscală (CUI)" inputMode="numeric" placeholder="RO12345678" autoComplete="off" />
-        <TextField name="company.taxRoll" label="Rol nominal unic (dacă îl cunoașteți)" autoComplete="off" />
         <TextField name="company.phone" label="Telefon" type="tel" autoComplete="section-seat tel" />
         <TextField name="company.fax" label="Fax" type="tel" autoComplete="off" />
         <TextField name="company.email" label="Adresa de poștă electronică" type="email" wide autoComplete="section-seat email" />

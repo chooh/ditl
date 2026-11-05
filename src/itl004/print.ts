@@ -48,7 +48,8 @@ export function toPrintData(d: Dossier) {
   const { street, number, block, entrance, floor, apartment, postalCode, locality } = s.address
 
   return {
-    rolNominal: c.taxRoll,
+    // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
+    rolNominal: '',
     reprezentant: {
       nume: fullName(s),
       actTip: s.idDocument.type,

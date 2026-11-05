@@ -73,7 +73,6 @@ const company = z.object({
   seat: address, // sediul
   correspondence: address, // adresa de corespondență
   foreignResidence: text(200), // adresa de rezidență în alt stat decât România
-  taxRoll: text(20), // numărul de rol nominal unic
   tradeRegister: z.object({
     office: text(80), // înregistrat la registrul comerțului
     number: text(30), // la nr.
@@ -320,7 +319,6 @@ export function emptyCompany(): DossierInput['company'] {
     seat: emptyAddress('România'),
     correspondence: emptyAddress(),
     foreignResidence: '',
-    taxRoll: '',
     tradeRegister: { office: '', number: '' },
     bank: { iban: '', name: '' },
   }

@@ -47,7 +47,8 @@ export function toPrintData(d: Dossier, index: number) {
 
   return {
     antet: {
-      rolNominal: c.taxRoll,
+      // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
+      rolNominal: '',
       registruTip: p.agriculturalRegister.type,
       registruVolum: p.agriculturalRegister.volume,
       registruPozitie: p.agriculturalRegister.position,
