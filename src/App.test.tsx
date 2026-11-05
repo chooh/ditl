@@ -115,6 +115,26 @@ describe('мастер', () => {
     // У каждого TextInput Carbon есть (пустой) role="alert" — ищем общее сообщение формы.
     expect(screen.getByText(/conține erori/).closest('[role="alert"]')).toBeTruthy()
   })
+
+  it('сообщение об ошибках называет оставшиеся разделы и исчезает, когда ошибок нет', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await fillSample(user)
+    await goTo(user, 'Acte')
+    await user.clear(input('Nr. act'))
+    await goTo(user, 'Imobile')
+    await user.clear(input('Strada', 3))
+    await goTo(user, 'Verificare')
+    await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
+    expect(screen.getByText(/corectați câmpurile marcate în secțiunile Acte, Imobile/)).toBeTruthy()
+
+    await user.type(input('Nr. act'), '1/2023')
+    expect(screen.getByText(/corectați câmpurile marcate în secțiunea Imobile\./)).toBeTruthy()
+
+    await goTo(user, 'Imobile')
+    await user.type(input('Strada', 3), 'Șos. Mihai Bravu')
+    expect(screen.queryByText(/conține erori/)).toBeNull()
+  })
 })
 
 describe('акты и объекты', () => {

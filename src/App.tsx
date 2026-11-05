@@ -40,10 +40,13 @@ function Editor({ session, onSwitch }: EditorProps) {
     mode: 'onTouched',
   })
   const [error, setError] = useState<string>()
+  /** Последняя отправка не прошла проверку — показать, где ошибки, пока они есть. */
+  const [submitFailed, setSubmitFailed] = useState(false)
   const [docs, setDocs] = useState<TypstDocument[]>()
 
   const onValid = async (data: Dossier) => {
     setError(undefined)
+    setSubmitFailed(false)
     try {
       // Шаблоны и логотип (~70 КБ) — отдельным чанком, только когда документы нужны.
       const { bundleTypst } = await import('./typst/bundle')
@@ -94,7 +97,15 @@ function Editor({ session, onSwitch }: EditorProps) {
             <FormProvider {...form}>
               <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
                 {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
-                <DossierForm session={session} onSwitch={onSwitch} hidden={!!docs} onValid={onValid} error={error} setError={setError} />
+                <DossierForm
+                  session={session}
+                  onSwitch={onSwitch}
+                  hidden={!!docs}
+                  onValid={onValid}
+                  onInvalid={() => setSubmitFailed(true)}
+                  error={error}
+                  submitFailed={submitFailed}
+                />
               </SectionsProvider>
             </FormProvider>
 
@@ -122,11 +133,12 @@ function Editor({ session, onSwitch }: EditorProps) {
 type DossierFormProps = EditorProps & {
   hidden: boolean
   onValid: (data: Dossier) => Promise<void>
+  onInvalid: () => void
   error: string | undefined
-  setError: (error: string | undefined) => void
+  submitFailed: boolean
 }
 
-function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: DossierFormProps) {
+function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, error, submitFailed }: DossierFormProps) {
   const form = useFormContext<DossierInput, unknown, Dossier>()
   const sections = useSections()
   const drafts = useDrafts(session, onSwitch)
@@ -135,8 +147,10 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
     // Синхронно открыть первый раздел с ошибками — сразу после этого react-hook-form
     // ставит фокус на первое ошибочное поле, а в скрытый раздел он не попадёт.
     flushSync(() => sections.openForKeys(Object.keys(errors)))
-    setError('Formularul conține erori — verificați câmpurile marcate.')
+    onFailed()
   }
+  // Сообщение следует за исправлениями: называет разделы, где ошибки остались, и исчезает с последней.
+  const withErrors = sections.list.filter((s) => s.issues > 0).map((s) => s.step)
 
   return (
     <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate hidden={hidden}>
@@ -157,6 +171,16 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
           <div className="wizard-body">
             {/* Над разделами, а не на шаге проверки: после неудачной отправки открыт раздел с ошибкой. */}
             {error && <InlineNotification kind="error" role="alert" lowContrast hideCloseButton title={error} />}
+            {submitFailed && withErrors.length > 0 && (
+              <InlineNotification
+                kind="error"
+                role="alert"
+                lowContrast
+                hideCloseButton
+                title="Formularul conține erori:"
+                subtitle={`corectați câmpurile marcate în ${withErrors.length === 1 ? 'secțiunea' : 'secțiunile'} ${withErrors.join(', ')}.`}
+              />
+            )}
             <Fields />
             <Review />
             <StepButtons
