@@ -430,8 +430,8 @@ function SignaturesSection() {
     <>
       <div className="grid">
         <TextField name="declarationDate" label="Data declarațiilor" type="date" autoComplete="off" />
-        <TextField name="director" label="Director P.J. — prenumele și numele" placeholder={fullName(signatory) || 'Semnatarul'} autoComplete="off" />
-        <TextField name="chiefAccountant" label="Șef compartiment contabil — prenumele și numele" autoComplete="off" />
+        <TextField name="director" label="Director P.J." helperText="Prenumele și numele" placeholder={fullName(signatory) || 'Semnatarul'} autoComplete="off" />
+        <TextField name="chiefAccountant" label="Șef compartiment contabil" helperText="Prenumele și numele" autoComplete="off" />
       </div>
       <p className="hint">
         ITL 004: dacă directorul nu este completat, se tipărește semnatarul. Numele se tipăresc deasupra semnăturilor; semnăturile și
