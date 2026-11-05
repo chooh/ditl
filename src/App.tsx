@@ -1,4 +1,4 @@
-import { Button, Column, Content, Grid, Header, HeaderName, InlineNotification, Link, SkipToContent, Stack } from '@carbon/react'
+import { Button, Column, Grid, Header, HeaderName, InlineNotification, Link, SkipToContent, Stack } from '@carbon/react'
 import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
@@ -72,60 +72,58 @@ function Editor({ session, onSwitch }: EditorProps) {
           Declarații fiscale
         </HeaderName>
       </Header>
-      <Content id="main-content" className="page">
-        <Grid>
-          <Column sm={4} md={8} lg={16}>
-            <Stack gap={7}>
-            <div>
-              <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
-              <p className="lead">
-                Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil
-                și o declarație ITL 004 pentru terenul aferent tuturor imobilelor.
-              </p>
-            </div>
-            <InlineNotification
-              kind="info"
-              role="status"
-              lowContrast
-              hideCloseButton
-              title="Datele nu sunt trimise nicăieri:"
-              subtitle="documentele sunt generate direct în browserul dumneavoastră."
-            />
+      <Grid as="main" id="main-content" className="page">
+        <Column sm={4} md={8} lg={16}>
+          <Stack gap={7}>
+          <div>
+            <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
+            <p className="lead">
+              Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil
+              și o declarație ITL 004 pentru terenul aferent tuturor imobilelor.
+            </p>
+          </div>
+          <InlineNotification
+            kind="info"
+            role="status"
+            lowContrast
+            hideCloseButton
+            title="Datele nu sunt trimise nicăieri:"
+            subtitle="documentele sunt generate direct în browserul dumneavoastră."
+          />
 
-            {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
+          {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
 
-            <FormProvider {...form}>
-              <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
-                {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
-                <DossierForm
-                  session={session}
-                  onSwitch={onSwitch}
-                  hidden={!!docs}
-                  onValid={onValid}
-                  onInvalid={() => setSubmitFailed(true)}
-                  error={error}
-                  submitFailed={submitFailed}
-                />
-              </SectionsProvider>
-            </FormProvider>
+          <FormProvider {...form}>
+            <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
+              {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
+              <DossierForm
+                session={session}
+                onSwitch={onSwitch}
+                hidden={!!docs}
+                onValid={onValid}
+                onInvalid={() => setSubmitFailed(true)}
+                error={error}
+                submitFailed={submitFailed}
+              />
+            </SectionsProvider>
+          </FormProvider>
 
-            {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
-                раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс. */}
-            <footer className="page-footer">
-              Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
-              <Link href="LICENSE-Liberation.txt" size="sm" inline>
-                SIL Open Font License 1.1
-              </Link>
-              . Fonturi IBM Plex © 2017 IBM Corp., sub licența{' '}
-              <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
-                SIL Open Font License 1.1
-              </Link>
-              .
-            </footer>
-            </Stack>
-          </Column>
-        </Grid>
-      </Content>
+          {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
+              раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс. */}
+          <footer className="page-footer">
+            Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
+            <Link href="LICENSE-Liberation.txt" size="sm" inline>
+              SIL Open Font License 1.1
+            </Link>
+            . Fonturi IBM Plex © 2017 IBM Corp., sub licența{' '}
+            <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
+              SIL Open Font License 1.1
+            </Link>
+            .
+          </footer>
+          </Stack>
+        </Column>
+      </Grid>
     </>
   )
 }

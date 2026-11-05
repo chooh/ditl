@@ -62,7 +62,10 @@ body {
 }
 
 // ── Каркас страницы ──
+// Страница — сам Grid, без Content UI Shell: тот добавлял padding 2rem поверх полей
+// сетки. Боковые поля задаёт сетка, а отступ под фиксированную шапку (3rem) — мы.
 .page {
+  margin-block-start: 3rem;
   padding-block: $spacing-07 $spacing-10;
 }
 
