@@ -14,7 +14,8 @@ const withIdDocument = (patch: object) => withSignatory({ idDocument: { ...sampl
 describe('dossierSchema', () => {
   it('принимает тестовое досье и нормализует данные', () => {
     const d = dossierSchema.parse(sample)
-    expect(d.company.taxId).toBe('18547290')
+    expect(d.company.taxId).toBe('RO18547290')
+    expect(d.company.uniqueId).toBe('18547290')
     expect(d.company.bank.iban).toBe('RO49AAAA1B31007593840000')
     expect(d.properties[0]!.building.purchaseValue).toBe(1250000)
     expect(d.properties[0]!.building.values.b.residential.value).toBe(760500.5)
@@ -35,6 +36,7 @@ describe('dossierSchema', () => {
       expect.arrayContaining([
         'company.name',
         'company.taxId',
+        'company.uniqueId',
         'signatory.role',
         'signatory.lastName',
         'signatory.idDocument.number',
@@ -50,8 +52,9 @@ describe('dossierSchema', () => {
     )
   })
 
-  it('проверяет контрольные цифры CUI, CNP и IBAN', () => {
-    expect(issuePaths({ ...sample, company: { ...sample.company, taxId: '18547291' } })).toEqual(['company.taxId'])
+  it('проверяет контрольные цифры CIF, CUI, CNP и IBAN', () => {
+    expect(issuePaths({ ...sample, company: { ...sample.company, taxId: 'RO18547291' } })).toEqual(['company.taxId'])
+    expect(issuePaths({ ...sample, company: { ...sample.company, uniqueId: '18547291' } })).toEqual(['company.uniqueId'])
     expect(issuePaths(withSignatory({ personalId: '1800101221145' }))).toEqual(['signatory.personalId'])
     expect(issuePaths({ ...sample, company: { ...sample.company, bank: { ...sample.company.bank, iban: 'RO48AAAA1B31007593840000' } } })).toEqual([
       'company.bank.iban',

@@ -73,6 +73,13 @@ export const cui = z
   .refine((s) => s.length > 0, REQUIRED)
   .refine((s) => s === '' || isValidCui(s), 'CUI invalid (cifra de control nu corespunde)')
 
+/** CIF юрлица — CUI, у плательщика НДС с префиксом RO; префикс сохраняется, как введён. */
+export const cif = z
+  .string()
+  .transform((s) => s.replace(/[\s.-]/g, '').toUpperCase())
+  .refine((s) => s.length > 0, REQUIRED)
+  .refine((s) => s === '' || isValidCui(stripCui(s)), 'CIF invalid (cifra de control nu corespunde)')
+
 export const cnp = z
   .string()
   .transform((s) => s.replace(/\s/g, ''))

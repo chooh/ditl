@@ -18,7 +18,7 @@ export type DocumentSpec = {
 
 /** ITL 002 на каждый объект и одна ITL 004 на землю под всеми объектами. */
 export function documentsFor(d: Dossier): DocumentSpec[] {
-  const cui = d.company.taxId
+  const cui = d.company.uniqueId
   const buildings = d.properties.map(
     (p, i): DocumentSpec => ({
       template: 'itl002',

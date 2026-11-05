@@ -73,7 +73,7 @@ describe('мастер', () => {
     expect(currentStep()).toBe('Semnatarul declarațiilor')
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2 }))
     expect(stepStatus('Contribuabil')).toMatch(/^Contribuabil: \d+ câmpuri de corectat$/)
-    await waitFor(() => expect(input('Cod de identificare fiscală (CUI)').getAttribute('aria-invalid')).toBe('true'))
+    await waitFor(() => expect(input('Codul unic de identificare (CUI)').getAttribute('aria-invalid')).toBe('true'))
   })
 
   it('на любой шаг можно перейти по индикатору, «Înapoi» ведёт к предыдущему', async () => {
@@ -94,7 +94,7 @@ describe('мастер', () => {
     expect(currentStep()).toBe('Verificarea dosarului')
     expect(screen.getByText(/Secțiuni gata: 7 din 7/)).toBeTruthy()
     expect(stepStatus('Contribuabil')).toBe('Contribuabil: gata')
-    expect(screen.getByText('Exemplu Construcții Țărănești S.R.L. · CUI RO18547290 · București')).toBeTruthy()
+    expect(screen.getByText('Exemplu Construcții Țărănești S.R.L. · CUI 18547290 · București')).toBeTruthy()
     expect(screen.getByText('2 acte · nr. 1234/2023 din 15.03.2023 · nr. 567/2024 din 02.09.2024')).toBeTruthy()
   })
 

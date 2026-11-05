@@ -61,8 +61,7 @@
   // ── I. Contribuabil ──
   section[I. DATE DE IDENTIFICARE A CONTRIBUABILULUI],
   field([Denumire contribuabil], c.denumire, span: 12),
-  // Для юрлица код фискальной идентификации совпадает с CUI.
-  field([Codul de identificare fiscală], c.cui, span: 6),
+  field([Codul de identificare fiscală], c.cif, span: 6),
   field([Codul unic de identificare], c.cui, span: 6),
   field([Numărul tel./fax], c.telefon, span: 5),
   field([Adresa de poștă electronică], c.email, span: 7),

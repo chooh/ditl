@@ -43,6 +43,7 @@ export function sampleDossier(): DossierInput {
     company: {
       name: 'Exemplu Construcții Țărănești S.R.L.',
       taxId: 'RO18547290',
+      uniqueId: '18547290',
       phone: '021 123 45 67',
       fax: '021 123 45 68',
       email: 'contabilitate@exemplu.ro',

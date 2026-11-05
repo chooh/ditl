@@ -14,7 +14,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     title: 'Contribuabilul (persoana juridică)',
     step: 'Contribuabil',
     keys: ['company'],
-    summary: ({ company: c }) => join(c.name, c.taxId && `CUI ${c.taxId}`, c.seat.locality),
+    summary: ({ company: c }) => join(c.name, c.uniqueId && `CUI ${c.uniqueId}`, c.seat.locality),
   },
   {
     id: 'signatory',

@@ -56,7 +56,8 @@ export function toPrintData(d: Dossier, index: number) {
     },
     contribuabil: {
       denumire: c.name,
-      cui: c.taxId,
+      cif: c.taxId,
+      cui: c.uniqueId,
       // На бланке одна графа «Numărul tel./fax».
       telefon: [c.phone, c.fax].filter(Boolean).join(' / '),
       email: c.email,

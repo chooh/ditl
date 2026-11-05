@@ -6,6 +6,7 @@ import {
   checks,
   choice,
   cnp,
+  cif,
   cui,
   date,
   email,
@@ -65,7 +66,8 @@ export type LandCategory = (typeof LAND_CATEGORIES)[number]
 
 const company = z.object({
   name: requiredText(150), // denumire contribuabil
-  taxId: cui, // codul de identificare fiscală (CUI)
+  taxId: cif, // codul de identificare fiscală (CIF)
+  uniqueId: cui, // codul unic de identificare (CUI)
   phone, // numărul tel.
   fax: phone, // fax
   email, // adresa de poștă electronică
@@ -305,6 +307,7 @@ export function emptyCompany(): DossierInput['company'] {
   return {
     name: '',
     taxId: '',
+    uniqueId: '',
     phone: '',
     fax: '',
     email: '',
