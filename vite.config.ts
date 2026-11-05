@@ -75,6 +75,13 @@ export default defineConfig({
   // Относительный base — сборка работает на GitHub Pages под любым именем репозитория.
   base: './',
   plugins: [react(), contentSecurityPolicy(), typstWithoutEval()],
+  css: {
+    preprocessorOptions: {
+      // Предупреждения об устаревшем синтаксисе из node_modules (@carbon/styles
+      // ещё использует Sass-функцию if()) исправить у себя нельзя — не показываем их.
+      scss: { quietDeps: true },
+    },
+  },
   build: {
     // Шрифты и WASM не инлайнить в JS как data: URL.
     assetsInlineLimit: 0,
