@@ -91,6 +91,7 @@ function CompanySection() {
         <TextField name="company.foreignResidence" label="Adresa (dacă este cazul)" wide autoComplete="off" />
       </div>
 
+      <h3 className="subheading">Modalitatea de comunicare</h3>
       <RadioGroup
         name="company.emailOnly"
         legend="Sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică"
