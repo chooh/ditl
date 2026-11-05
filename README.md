@@ -51,7 +51,8 @@ src/
   form/common.ts        общие части схемы: текст, даты, суммы, адрес, приложения, CUI/CNP/IBAN
   form/validators.ts    CUI, CNP, IBAN (контрольные цифры), суммы в леях, диакритика ș/ț
   form/fields.tsx       поля формы, адресный блок, приложения
-  form/sections.tsx     сворачиваемые разделы: статус, сводка, автосворачивание
+  form/sections.tsx     разделы-шаги мастера: открытый шаг, статус (готово / ошибки), сводка
+  form/wizard.tsx       индикатор шагов (Carbon ProgressIndicator), «Înapoi / Continuă», шаг проверки
   drafts/               черновики в localStorage и панель черновиков
   styles.scss           стили Carbon (только используемые компоненты), темы White / Gray 100, свои классы
   typst/                шаблоны и сборка .typ (см. ниже)

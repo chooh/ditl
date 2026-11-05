@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -21,11 +21,16 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-/** Раздел — пункт Carbon Accordion (<li>), заголовок — его кнопка. */
-const section = (title: RegExp) => screen.getByRole('button', { name: title }).closest('li')!
-const isOpen = (title: RegExp) => screen.getByRole('button', { name: title }).getAttribute('aria-expanded') === 'true'
+type User = ReturnType<typeof userEvent.setup>
+
+/** Кнопка шага в индикаторе; её имя — «Acte: de completat», «Imobile: 1 câmp de corectat»… */
+const step = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}(:|$)`) })
+const stepStatus = (name: string) => step(name).getAttribute('aria-label')
+const goTo = (user: User, name: string) => user.click(step(name))
+/** Заголовок открытого шага: заголовки скрытых шагов недоступны. */
+const currentStep = () => screen.getByRole('heading', { level: 2 }).textContent
 const input = (label: string, i = 0) => screen.getAllByLabelText(label)[i] as HTMLInputElement
-const fillSample = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
+const fillSample = (user: User) => user.click(screen.getByRole('button', { name: 'Completează cu date de test' }))
 
 /** Скачивания .typ: содержимое blob'ов по порядку. */
 function captureDownloads() {
@@ -36,69 +41,62 @@ function captureDownloads() {
   return blobs
 }
 
-describe('сворачиваемые разделы', () => {
-  it('сначала все раскрыты, обязательные помечены «De completat»', () => {
+describe('мастер', () => {
+  it('сначала открыт первый раздел; шаги показывают статус', () => {
     render(<App />)
-    expect(isOpen(/Contribuabilul \(persoana juridică\)/)).toBe(true)
-    expect(within(section(/Imobilele/)).getByText('De completat')).toBeTruthy()
-    expect(within(section(/Scutiri/)).getByText('Gata')).toBeTruthy()
+    expect(currentStep()).toBe('Contribuabilul (persoana juridică)')
+    expect(step('Contribuabil').getAttribute('aria-current')).toBe('step')
+    expect(stepStatus('Imobile')).toBe('Imobile: de completat')
+    expect(stepStatus('Scutiri')).toBe('Scutiri: gata')
   })
 
-  it('раздел без ошибок сворачивается, когда фокус уходит в другой раздел', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.type(screen.getByLabelText('În calitate de'), 'unitate de cult')
-    await user.click(screen.getByLabelText('Data declarațiilor'))
-
-    expect(isOpen(/Scutiri/)).toBe(false)
-    expect(within(section(/Scutiri/)).getByText('unitate de cult')).toBeTruthy()
-    expect(isOpen(/Data și semnături/)).toBe(true)
-  })
-
-  it('раздел с ошибками не сворачивается и показывает их количество', async () => {
+  it('«Continuă» открывает следующий шаг и показывает ошибки покинутого', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.type(screen.getByLabelText('Denumire contribuabil'), 'Exemplu SRL')
-    await user.click(input('Nr. act'))
+    await user.click(screen.getByRole('button', { name: 'Continuă: Semnatar' }))
 
-    expect(isOpen(/Contribuabilul/)).toBe(true)
-    expect(within(section(/Contribuabilul/)).getByText(/câmpuri de corectat/)).toBeTruthy()
+    expect(currentStep()).toBe('Semnatarul declarațiilor')
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2 }))
+    expect(stepStatus('Contribuabil')).toMatch(/^Contribuabil: \d+ câmpuri de corectat$/)
+    await waitFor(() => expect(input('Cod de identificare fiscală (CUI)').getAttribute('aria-invalid')).toBe('true'))
   })
 
-  it('по клику заголовок разворачивает и сворачивает раздел', async () => {
+  it('на любой шаг можно перейти по индикатору, «Înapoi» ведёт к предыдущему', async () => {
     const user = userEvent.setup()
     render(<App />)
-    const header = screen.getByRole('button', { name: /Documente anexate la toate declarațiile/ })
-    await user.click(header)
-    expect(isOpen(/Documente anexate la toate/)).toBe(false)
-    await user.click(header)
-    expect(isOpen(/Documente anexate la toate/)).toBe(true)
+    await goTo(user, 'Imobile')
+    expect(currentStep()).toBe('Imobilele: clădire și teren')
+
+    await user.click(screen.getByRole('button', { name: 'Înapoi' }))
+    expect(currentStep()).toBe('Actele de dobândire')
   })
 
-  it('тестовые данные: все разделы готовы и свёрнуты со сводкой', async () => {
+  it('тестовые данные: все разделы готовы, открыта проверка со сводкой', async () => {
     const user = userEvent.setup()
     render(<App />)
     await fillSample(user)
 
-    expect(screen.getByText('Secțiuni gata: 7 din 7')).toBeTruthy()
-    expect(isOpen(/Contribuabilul/)).toBe(false)
+    expect(currentStep()).toBe('Verificarea dosarului')
+    expect(screen.getByText(/Secțiuni gata: 7 din 7/)).toBeTruthy()
+    expect(stepStatus('Contribuabil')).toBe('Contribuabil: gata')
     expect(screen.getByText('Exemplu Construcții Țărănești S.R.L. · CUI RO18547290 · București')).toBeTruthy()
-    expect(within(section(/Actele de dobândire/)).getByText('2 acte · nr. 1234/2023 din 15.03.2023 · nr. 567/2024 din 02.09.2024')).toBeTruthy()
+    expect(screen.getByText('2 acte · nr. 1234/2023 din 15.03.2023 · nr. 567/2024 din 02.09.2024')).toBeTruthy()
   })
 
-  it('отправка с ошибками раскрывает раздел и ставит фокус на первое ошибочное поле', async () => {
+  it('отправка с ошибками открывает раздел и ставит фокус на первое ошибочное поле', async () => {
     const user = userEvent.setup()
     render(<App />)
     await fillSample(user)
-    // Сломать одно поле в свёрнутом разделе объектов.
-    await user.click(screen.getByRole('button', { name: /Imobilele/ }))
+    // Сломать одно поле в разделе объектов и вернуться к проверке.
+    await user.click(screen.getByRole('button', { name: 'Modifică: Imobilele: clădire și teren' }))
     await user.clear(input('Comuna / orașul / municipiul', 1))
-    await user.click(screen.getByRole('button', { name: /Imobilele/ }))
-    expect(isOpen(/Imobilele/)).toBe(false)
+    await goTo(user, 'Verificare')
+    expect(stepStatus('Imobile')).toBe('Imobile: 1 câmp de corectat')
 
     await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
 
-    expect(isOpen(/Imobilele/)).toBe(true)
+    expect(currentStep()).toBe('Imobilele: clădire și teren')
     expect(document.activeElement).toBe(input('Comuna / orașul / municipiul', 1))
     // У каждого TextInput Carbon есть (пустой) role="alert" — ищем общее сообщение формы.
     expect(screen.getByText(/conține erori/).closest('[role="alert"]')).toBeTruthy()
@@ -109,7 +107,9 @@ describe('акты и объекты', () => {
   it('новый объект берёт акт и адрес дома у предыдущего', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await goTo(user, 'Acte')
     await user.type(input('Nr. act'), '1234/2023')
+    await goTo(user, 'Imobile')
     await user.type(input('Strada', 3), 'Șos. Mihai Bravu')
     await user.click(screen.getByRole('button', { name: 'Adaugă imobil' }))
 
@@ -122,7 +122,7 @@ describe('акты и объекты', () => {
     const user = userEvent.setup()
     render(<App />)
     await fillSample(user)
-    await user.click(screen.getByRole('button', { name: /Actele de dobândire/ }))
+    await goTo(user, 'Acte')
 
     expect(screen.getByText('Actul nu poate fi șters: este folosit de imobilul 3.')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Șterge actul 2' })).toBeNull()
@@ -133,17 +133,18 @@ describe('акты и объекты', () => {
     const user = userEvent.setup()
     render(<App />)
     await fillSample(user)
-    await user.click(screen.getByRole('button', { name: /Actele de dobândire/ }))
+    await goTo(user, 'Acte')
     await user.click(screen.getByRole('button', { name: 'Adaugă act' }))
     await user.type(input('Nr. act', 2), '89/2025')
     await user.type(input('Data actului', 2), '2025-02-03')
     await user.click(screen.getAllByLabelText('Închiriere')[2]!)
 
-    await user.click(screen.getByRole('button', { name: /Imobilele/ }))
+    await goTo(user, 'Imobile')
     await user.selectOptions(screen.getAllByLabelText('Dobândit prin')[2]!, 'Actul 3 nr. 89/2025 din 03.02.2025')
-    // Теперь второй акт не используется — его можно удалить (раздел актов уже свернулся).
-    await user.click(screen.getByRole('button', { name: /Actele de dobândire/ }))
+    // Теперь второй акт не используется — его можно удалить.
+    await goTo(user, 'Acte')
     await user.click(screen.getByRole('button', { name: 'Șterge actul 2' }))
+    await goTo(user, 'Verificare')
     await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
     await screen.findByRole('heading', { name: 'Documentele sunt gata' })
 
@@ -177,14 +178,14 @@ describe('черновики', () => {
     expect(screen.getByRole('button', { name: 'Ciornele mele (0)' })).toHaveProperty('disabled', true)
   })
 
-  it('восстановленный черновик: готовые разделы свёрнуты', async () => {
+  it('восстановленный готовый черновик открывается на проверке', async () => {
     const user = userEvent.setup()
     render(<App />)
     await fillSample(user)
     reload()
 
-    expect(screen.getByText('Secțiuni gata: 7 din 7')).toBeTruthy()
-    expect(isOpen(/Contribuabilul/)).toBe(false)
+    expect(currentStep()).toBe('Verificarea dosarului')
+    expect(screen.getByText(/Secțiuni gata: 7 din 7/)).toBeTruthy()
   })
 
   it('новое досье не затирает прежнее, его можно открыть из списка', async () => {
@@ -210,9 +211,9 @@ describe('черновики', () => {
     await user.click(screen.getByRole('button', { name: 'Dosar nou pentru aceeași firmă' }))
 
     expect(screen.getByRole('button', { name: 'Ciornele mele (2)' })).toBeTruthy()
-    expect(isOpen(/Contribuabilul/)).toBe(false)
-    expect(isOpen(/Semnatarul/)).toBe(false)
-    expect(isOpen(/Imobilele/)).toBe(true)
+    expect(stepStatus('Contribuabil')).toBe('Contribuabil: gata')
+    expect(stepStatus('Semnatar')).toBe('Semnatar: gata')
+    expect(currentStep()).toBe('Actele de dobândire')
     expect(screen.getAllByLabelText('Nr. act')).toHaveLength(1)
     expect(input('Nr. act').value).toBe('')
   })

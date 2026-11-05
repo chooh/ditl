@@ -1,16 +1,18 @@
-import { AccordionItem, Tag } from '@carbon/react'
-import { createContext, useContext, useState, type FocusEvent, type ReactNode } from 'react'
+import { Tag } from '@carbon/react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
 
 /**
- * Разделы сплошной формы. Раздел без ошибок сворачивается, когда фокус переходит
- * за его пределы, и показывает краткую сводку; кликом по заголовку его можно
- * открыть снова. Порядок заполнения не навязывается.
+ * Разделы формы-мастера: на экране один раздел, рядом — шаги со статусами (wizard.tsx),
+ * последний шаг — проверка всего досье. Порядок заполнения не навязывается: на любой
+ * шаг можно перейти, а уходя с раздела, пользователь видит его ошибки.
  */
 export type SectionDef<V> = {
   id: string
   title: string
+  /** Короткое имя шага в индикаторе: Carbon советует не больше 16 символов. */
+  step: string
   /** Ключи верхнего уровня значений формы, которые относятся к разделу. */
   keys: readonly (keyof V & string)[]
   summary: (values: V) => string
@@ -18,24 +20,36 @@ export type SectionDef<V> = {
 
 export const join = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ')
 
-type SectionState = {
+/** Последний шаг мастера — проверка и генерация документов. */
+export const REVIEW = 'review'
+
+export type SectionState = {
+  id: string
   title: string
+  step: string
   /** Сколько проблем находит схема в этом разделе прямо сейчас. */
   issues: number
-  /** Пользователь уже заходил в раздел — только тогда показываем количество ошибок. */
+  /** Пользователь уже уходил с раздела — только тогда показываем количество ошибок. */
   visited: boolean
-  open: boolean
   summary: string
 }
 
 type SectionsApi = {
+  list: SectionState[]
   get(id: string): SectionState
-  setOpen(id: string, open: boolean): void
-  markVisited(id: string): void
-  /** Раскрыть разделы, к которым относятся ключи верхнего уровня (например, из ошибок формы). */
+  /** Открытый шаг: id раздела или REVIEW. */
+  current: string
+  /** Соседние шаги открытого (undefined — края). */
+  prev: string | undefined
+  next: string | undefined
+  /** Перейти к шагу. Покинутый раздел проверяется: его ошибки видны в полях и в индикаторе. */
+  go(id: string): void
+  /** Растёт при переходе по шагам — по нему заголовок шага получает фокус. */
+  navigation: number
+  /** Открыть первый раздел, к которому относятся ключи верхнего уровня (например, из ошибок формы). */
   openForKeys(keys: string[]): void
-  /** Для только что загруженных значений: свернуть готовые разделы, раскрыть остальные. */
-  collapseCompleted(values: unknown): void
+  /** Для только что загруженных значений: открыть первый незаконченный раздел или проверку. */
+  resume(values: unknown): void
   done: number
   total: number
 }
@@ -57,15 +71,17 @@ type Props<V> = {
 }
 
 export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
-  const { control, getValues } = useFormContext()
+  const { control, getValues, trigger } = useFormContext()
   // Подписка на все поля: провайдер перерисовывается при каждом изменении,
   // а children — нет (это те же элементы, что пришли сверху).
   useWatch({ control })
   const values = getValues() as V
 
   const allIds = sections.map((s) => s.id)
+  const steps = [...allIds, REVIEW]
   const sectionOfKey = new Map<string, string>(sections.flatMap((s) => s.keys.map((k) => [k, s.id] as const)))
-  const [open, setOpenMap] = useState(() => byId(allIds, true))
+  const [current, setCurrent] = useState(allIds[0]!)
+  const [navigation, setNavigation] = useState(0)
   const [visited, setVisited] = useState(() => byId(allIds, false))
 
   const countIssues = (v: unknown) => {
@@ -80,25 +96,38 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   // Полная проверка схемой на каждое изменение — доли миллисекунды для сотни полей.
   const issues = countIssues(values)
   const section = (id: string) => sections.find((s) => s.id === id)!
+  const get = (id: string): SectionState => {
+    const s = section(id)
+    return { id, title: s.title, step: s.step, issues: issues[id]!, visited: visited[id]!, summary: s.summary(values) }
+  }
+  const index = steps.indexOf(current)
 
   const api: SectionsApi = {
-    get: (id) => ({
-      title: section(id).title,
-      issues: issues[id]!,
-      visited: visited[id]!,
-      open: open[id]!,
-      summary: section(id).summary(values),
-    }),
-    setOpen: (id, value) => setOpenMap((m) => ({ ...m, [id]: value })),
-    markVisited: (id) => setVisited((m) => (m[id] ? m : { ...m, [id]: true })),
-    openForKeys: (keys) => {
-      const ids = keys.map((k) => sectionOfKey.get(k)).filter((id): id is string => !!id)
-      setOpenMap((m) => ({ ...m, ...byId(ids, true) }))
-      setVisited((m) => ({ ...m, ...byId(ids, true) }))
+    list: allIds.map(get),
+    get,
+    current,
+    prev: steps[index - 1],
+    next: steps[index + 1],
+    go: (id) => {
+      if (id === current) return
+      if (current !== REVIEW) {
+        setVisited((m) => ({ ...m, [current]: true }))
+        // Показать ошибки покинутого раздела в его полях — к ним вернутся по индикатору.
+        void trigger([...section(current).keys])
+      }
+      setCurrent(id)
+      setNavigation((n) => n + 1)
     },
-    collapseCompleted: (loaded) => {
+    navigation,
+    openForKeys: (keys) => {
+      const ids = new Set(keys.map((k) => sectionOfKey.get(k)))
+      const first = allIds.find((id) => ids.has(id))
+      setVisited((m) => ({ ...m, ...byId([...ids].filter((id): id is string => !!id), true) }))
+      if (first) setCurrent(first)
+    },
+    resume: (loaded) => {
       const loadedIssues = countIssues(loaded)
-      setOpenMap(Object.fromEntries(allIds.map((id) => [id, loadedIssues[id]! > 0])))
+      setCurrent(allIds.find((id) => loadedIssues[id]! > 0) ?? REVIEW)
       setVisited(byId(allIds, false))
     },
     done: allIds.filter((id) => issues[id] === 0).length,
@@ -108,56 +137,64 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   return <SectionsContext.Provider value={api}>{children}</SectionsContext.Provider>
 }
 
-/** Раздел — пункт Carbon Accordion; все разделы формы лежат в одном <Accordion>. */
-export function Section({ id, children }: { id: string; children: ReactNode }) {
-  const sections = useSections()
-  const { title, issues, visited, open, summary } = sections.get(id)
+export type Status = 'done' | 'error' | 'todo'
 
-  const status =
-    issues === 0 ? (
-      <Tag type="green" size="sm">
-        Gata
-      </Tag>
-    ) : visited ? (
-      <Tag type="red" size="sm">
-        {issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat`}
-      </Tag>
-    ) : (
-      <Tag type="gray" size="sm">
-        De completat
-      </Tag>
-    )
+export const statusOf = ({ issues, visited }: SectionState): Status => (issues === 0 ? 'done' : visited ? 'error' : 'todo')
 
-  // Фокус отслеживается на <li> раздела: AccordionItem передаёт ему остальные props,
-  // хотя в его типах их нет (поэтому — через spread).
-  const focusTracking = {
-    onFocus: () => sections.markVisited(id),
-    onBlur: (e: FocusEvent<HTMLLIElement>) => {
-      // Сворачиваем только при переходе фокуса на элемент ВНЕ раздела: если фокус
-      // просто пропал (клик по пустому месту, удалённая кнопка) — ничего не делаем.
-      const next = e.relatedTarget
-      if (!(next instanceof HTMLElement) || e.currentTarget.contains(next) || issues > 0) return
-      sections.setOpen(id, false)
-      // Раздел выше схлопнулся — вернуть в поле зрения элемент, куда ушёл фокус.
-      requestAnimationFrame(() => next.scrollIntoView({ block: 'nearest' }))
-    },
+export const issuesText = (issues: number) => (issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat`)
+
+export function StatusTag({ section }: { section: SectionState }) {
+  switch (statusOf(section)) {
+    case 'done':
+      return (
+        <Tag type="green" size="sm">
+          Gata
+        </Tag>
+      )
+    case 'error':
+      return (
+        <Tag type="red" size="sm">
+          {issuesText(section.issues)}
+        </Tag>
+      )
+    case 'todo':
+      return (
+        <Tag type="gray" size="sm">
+          De completat
+        </Tag>
+      )
   }
+}
+
+/**
+ * Экран шага. Неоткрытые шаги скрыты атрибутом hidden, а не убраны из дерева:
+ * поля остаются зарегистрированными, а при ошибке поле можно сразу сфокусировать.
+ */
+export function StepPanel({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  const { current, navigation } = useSections()
+  const heading = useRef<HTMLHeadingElement>(null)
+  const open = current === id
+
+  // После перехода по шагам — фокус на заголовок: экранный диктор прочитает, куда попали.
+  useEffect(() => {
+    if (open && navigation > 0) heading.current?.focus()
+  }, [navigation]) // только при переходе, не при открытии шага с ошибкой
 
   return (
-    // Тело раздела всегда в DOM (Carbon скрывает его стилями): поля остаются зарегистрированными в форме.
-    <AccordionItem
-      {...focusTracking}
-      open={open}
-      onHeadingClick={({ isOpen }) => sections.setOpen(id, isOpen)}
-      title={
-        <span className="section-heading">
-          <span className="section-name">{title}</span>
-          {status}
-          {!open && summary && <span className="section-summary">{summary}</span>}
-        </span>
-      }
-    >
+    <section className="step" aria-labelledby={`step-${id}-title`} hidden={!open}>
+      <h2 id={`step-${id}-title`} className="step-title" ref={heading} tabIndex={-1}>
+        {title}
+      </h2>
       {children}
-    </AccordionItem>
+    </section>
+  )
+}
+
+export function Section({ id, children }: { id: string; children: ReactNode }) {
+  const { title } = useSections().get(id)
+  return (
+    <StepPanel id={id} title={title}>
+      {children}
+    </StepPanel>
   )
 }

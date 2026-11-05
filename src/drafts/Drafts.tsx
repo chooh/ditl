@@ -80,10 +80,11 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     }
   }, [watch, flush])
 
-  // Открытый черновик или перенесённые данные: готовые разделы свёрнуты, новые данные сразу сохранены.
+  // Открытый черновик или перенесённые данные: открыт первый незаконченный раздел
+  // (или проверка, если готово всё), новые данные сразу сохранены.
   useLayoutEffect(() => {
     const loaded = session.draft?.values ?? session.initial
-    if (loaded && !isBlank(loaded)) sections.collapseCompleted(loaded)
+    if (loaded && !isBlank(loaded)) sections.resume(loaded)
     if (session.initial) flush()
   }, []) // только при монтировании
 

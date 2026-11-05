@@ -1,4 +1,4 @@
-import { Button, Column, Content, Grid, Header, HeaderName, InlineNotification, Link, ProgressBar, SkipToContent, Stack } from '@carbon/react'
+import { Button, Column, Content, Grid, Header, HeaderName, InlineNotification, Link, SkipToContent, Stack } from '@carbon/react'
 import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
@@ -13,6 +13,7 @@ import { DraftsPanel, useDrafts, type Session } from './drafts/Drafts'
 import { loadActiveDraft } from './drafts/storage'
 import { todayIso } from './form/common'
 import { SectionsProvider, useSections } from './form/sections'
+import { Review, StepButtons, StepIndicator } from './form/wizard'
 import { Result, type TypstDocument } from './output/Result'
 import { formatDate } from './pdf/format'
 
@@ -70,8 +71,7 @@ function Editor({ session, onSwitch }: EditorProps) {
       </Header>
       <Content id="main-content" className="page">
         <Grid>
-          {/* Форма — узкой колонкой, результат с предпросмотром PDF — во всю ширину. */}
-          <Column sm={4} md={8} lg={docs ? 16 : { span: 10, offset: 3 }}>
+          <Column sm={4} md={8} lg={16}>
             <Stack gap={7}>
             <div>
               <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
@@ -132,7 +132,7 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
   const drafts = useDrafts(session, onSwitch)
 
   const onInvalid = (errors: FieldErrors) => {
-    // Синхронно раскрыть разделы с ошибками — сразу после этого react-hook-form
+    // Синхронно открыть первый раздел с ошибками — сразу после этого react-hook-form
     // ставит фокус на первое ошибочное поле, а в скрытый раздел он не попадёт.
     flushSync(() => sections.openForKeys(Object.keys(errors)))
     setError('Formularul conține erori — verificați câmpurile marcate.')
@@ -152,22 +152,21 @@ function DossierForm({ session, onSwitch, hidden, onValid, error, setError }: Do
 
         <DraftsPanel drafts={drafts} />
 
-        <ProgressBar
-          label={`Secțiuni gata: ${sections.done} din ${sections.total}`}
-          value={sections.done}
-          max={sections.total}
-          status={sections.done === sections.total ? 'finished' : 'active'}
-          size="small"
-        />
-
-        <Fields />
-
-        {error && <InlineNotification kind="error" role="alert" lowContrast hideCloseButton title={error} />}
-
-        <div>
-          <Button type="submit" renderIcon={DocumentExport} disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Se pregătesc…' : 'Generează documentele'}
-          </Button>
+        <div className="wizard">
+          <StepIndicator />
+          <div className="wizard-body">
+            {/* Над разделами, а не на шаге проверки: после неудачной отправки открыт раздел с ошибкой. */}
+            {error && <InlineNotification kind="error" role="alert" lowContrast hideCloseButton title={error} />}
+            <Fields />
+            <Review />
+            <StepButtons
+              last={
+                <Button type="submit" size="lg" renderIcon={DocumentExport} disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Se pregătesc…' : 'Generează documentele'}
+                </Button>
+              }
+            />
+          </div>
         </div>
       </Stack>
     </form>

@@ -20,7 +20,7 @@ import {
 /** Поля досье: фирма, подписант, акты, объекты и то, что относится ко всем декларациям. */
 export function Fields() {
   return (
-    <Accordion size="lg">
+    <>
       <Section id="company">
         <CompanySection />
       </Section>
@@ -52,7 +52,7 @@ export function Fields() {
       <Section id="signatures">
         <SignaturesSection />
       </Section>
-    </Accordion>
+    </>
   )
 }
 
@@ -72,14 +72,14 @@ function CompanySection() {
         <TextField name="company.bank.name" label="Deschis la" placeholder="Banca" wide autoComplete="off" />
       </div>
 
-      <h2 className="subheading">Sediul</h2>
+      <h3 className="subheading">Sediul</h3>
       <AddressFields
         prefix="company.seat"
         section="seat"
         fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality', 'county', 'country']}
       />
 
-      <h2 className="subheading">Adresa de corespondență</h2>
+      <h3 className="subheading">Adresa de corespondență</h3>
       <p className="hint">ITL 002. Completați doar dacă diferă de sediu.</p>
       <AddressFields
         prefix="company.correspondence"
@@ -87,7 +87,7 @@ function CompanySection() {
         fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality']}
       />
 
-      <h2 className="subheading">Adresa de rezidență în alt stat decât România</h2>
+      <h3 className="subheading">Adresa de rezidență în alt stat decât România</h3>
       <div className="grid">
         <TextField name="company.foreignResidence" label="Adresa (dacă este cazul)" wide autoComplete="off" />
       </div>
@@ -124,7 +124,7 @@ function SignatorySection() {
         <TextField name="signatory.email" label="Adresa de poștă electronică" type="email" wide autoComplete="section-signatory email" />
       </div>
 
-      <h2 className="subheading">Actul de identitate</h2>
+      <h3 className="subheading">Actul de identitate</h3>
       <div className="grid">
         <TextField name="signatory.idDocument.type" label="Tipul actului de identitate" list="id-types" autoComplete="off" />
         <TextField name="signatory.idDocument.series" label="Seria" autoComplete="off" />
@@ -139,7 +139,7 @@ function SignatorySection() {
         </datalist>
       </div>
 
-      <h2 className="subheading">Domiciliul</h2>
+      <h3 className="subheading">Domiciliul</h3>
       <AddressFields
         prefix="signatory.address"
         section="signatory"
@@ -214,7 +214,7 @@ function DeedFields({ index: i }: { index: number }) {
           <TextField name={`${p}.formOther`} label="Alte modalități — precizați" wide autoComplete="off" />
         </div>
       )}
-      <h2 className="subheading">Documente anexate pentru acest act</h2>
+      <h3 className="subheading">Documente anexate pentru acest act</h3>
       <AttachmentsFields name={`${p}.attachments`} label={`Actul ${i + 1}`} />
     </>
   )
@@ -261,7 +261,7 @@ function PropertyFields({ index: i }: { index: number }) {
     <>
       <DeedSelect index={i} />
 
-      <h2 className="subheading">Adresa</h2>
+      <h3 className="subheading">Adresa</h3>
       <div className="grid">
         <TextField name={`${p}.address.street`} label="Strada" wide autoComplete="off" />
         <TextField name={`${p}.address.number`} label="Nr." autoComplete="off" />
@@ -273,13 +273,13 @@ function PropertyFields({ index: i }: { index: number }) {
         <TextField name={`${p}.address.district`} label="Satul / sectorul" placeholder="ex. Sector 2" autoComplete="off" />
       </div>
 
-      <h2 className="subheading">Clădirea (ITL 002)</h2>
+      <h3 className="subheading">Clădirea (ITL 002)</h3>
       <BuildingFields index={i} />
 
-      <h2 className="subheading">Terenul aferent (ITL 004)</h2>
+      <h3 className="subheading">Terenul aferent (ITL 004)</h3>
       <LandFields index={i} />
 
-      <h2 className="subheading">Registrul agricol (dacă este cazul)</h2>
+      <h3 className="subheading">Registrul agricol (dacă este cazul)</h3>
       <div className="grid">
         <TextField name={`${p}.agriculturalRegister.period`} label="Perioada" placeholder="ex. 2020–2024" autoComplete="off" />
         <TextField name={`${p}.agriculturalRegister.type`} label="Tipul" autoComplete="off" />
@@ -287,7 +287,7 @@ function PropertyFields({ index: i }: { index: number }) {
         <TextField name={`${p}.agriculturalRegister.position`} label="Poziția nr." autoComplete="off" />
       </div>
 
-      <h2 className="subheading">Documente anexate pentru acest imobil</h2>
+      <h3 className="subheading">Documente anexate pentru acest imobil</h3>
       <AttachmentsFields name={`${p}.attachments`} label={`Imobilul ${i + 1}`} />
     </>
   )
