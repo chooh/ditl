@@ -51,7 +51,8 @@ export function toPrintData(d: Dossier) {
     // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
     rolNominal: '',
     reprezentant: {
-      nume: fullName(s),
+      // Как в документах: сначала фамилия, всё прописными — «POPESCU ION-MIHĂIȚĂ».
+      nume: `${s.lastName} ${s.firstName}`.trim().toLocaleUpperCase('ro-RO'),
       actTip: s.idDocument.type,
       serie: s.idDocument.series,
       numar: s.idDocument.number,

@@ -1,9 +1,13 @@
 // ITL 004 (Model 2016, Anexa nr. 4) — декларация по налогу на землю для юрлиц.
 // Текст — по бланку ITL004-Teren-PJ.docx. Отличия от бланка:
 // - пункты «1. începând cu data de…» и строки таблицы печатаются только для заявленных участков;
-// - из «dobândit/închiriat/concesionat/…» остаётся только выбранный вариант.
+// - из «dobândit/închiriat/concesionat/…» остаётся только выбранный вариант;
+// - в шапке незаполненные поля не печатаются вместе с подписью.
 
 #import "common.typ": *
+
+// Заполненные поля печатаются как обычный текст, без пунктирного подчёркивания из common.typ.
+#let blank(value, width: 2cm) = if value == "" { dots(width) } else { value }
 
 #let d = load-data("itl004")
 #let r = d.reprezentant
@@ -38,21 +42,58 @@
 #v(0.3cm)
 
 // ── Представитель и юрлицо ──
-#let domiciliu = if r.tara == "" or r.tara == "România" [ROMÂNIA] else [ROMÂNIA / #blank(r.tara)]
+// Незаполненные поля не печатаются вместе с подписью: без подъезда нет и «sc. ……».
+#let fields(..pairs) = pairs.pos().filter(((_, value)) => value != "").map(((label, value)) => [#label #blank(value)])
 
-#h(1.5em)Subsemnatul #blank(r.nume, width: 6cm), identificat prin actul de identitate #blank(r.actTip),
-seria #blank(r.serie, width: 1cm), nr. #blank(r.numar) și codul numeric personal #blank(r.cnp, width: 4cm),
-domiciliat în #domiciliu, județul #blank(r.judet), codul poștal #blank(r.codPostal),
-municipiul/orașul/comuna #blank(r.localitate, width: 3cm), satul/sectorul #blank(r.sector), str. #blank(r.strada, width: 4cm),
-nr. #blank(r.nr, width: 1cm), bl. #blank(r.bloc, width: 1cm), sc. #blank(r.scara, width: 0.8cm), et. #blank(r.etaj, width: 0.8cm),
-ap. #blank(r.apartament, width: 0.8cm), în calitate de reprezentant al #blank(c.denumire, width: 5cm),
-Codul de identificare fiscală #blank(c.cif, width: 3cm), județ #blank(c.judet), loc. #blank(c.localitate, width: 3cm),
-cod poștal #blank(c.codPostal), sector #blank(c.sector, width: 0.8cm), str. #blank(c.strada, width: 4cm),
-nr. #blank(c.nr, width: 1cm), bloc #blank(c.bloc, width: 1cm), scara #blank(c.scara, width: 0.8cm), etaj #blank(c.etaj, width: 0.8cm),
-ap. #blank(c.apartament, width: 0.8cm), tel. #blank(c.telefon, width: 3cm), fax #blank(c.fax, width: 3cm),
-adresă de e-mail #blank(c.email, width: 4cm), înregistrat la registrul comerțului #blank(c.registruComertului, width: 3cm)
-la nr. #blank(c.nrRegistruComertului, width: 3cm), cont IBAN #blank(c.iban, width: 5cm), deschis la #blank(c.banca, width: 4cm),
-declar că:
+#let domiciliu = if r.tara == "" or r.tara == "România" [România] else [România / #blank(r.tara)]
+#let registru = if c.registruComertului != "" or c.nrRegistruComertului != "" {
+  (
+    [înregistrat la registrul comerțului],
+    ..if c.registruComertului != "" { (blank(c.registruComertului),) },
+    ..fields(("la nr.", c.nrRegistruComertului)),
+  ).join[ ]
+}
+
+#let antet = (
+  [Subsemnatul #strong(blank(r.nume, width: 6cm))],
+  [identificat prin actul de identitate #blank(r.actTip)],
+  ..fields(("seria", r.serie)),
+  [nr. #blank(r.numar)#if r.cnp != "" [ și codul numeric personal #blank(r.cnp)]],
+  [domiciliat în #domiciliu],
+  ..fields(
+    ("județul", r.judet),
+    ("codul poștal", r.codPostal),
+    ("municipiul/orașul/comuna", r.localitate),
+    ("satul/sectorul", r.sector),
+    ("str.", r.strada),
+    ("nr.", r.nr),
+    ("bl.", r.bloc),
+    ("sc.", r.scara),
+    ("et.", r.etaj),
+    ("ap.", r.apartament),
+  ),
+  [în calitate de reprezentant al #strong(blank(c.denumire, width: 5cm))],
+  ..fields(
+    ("Codul de identificare fiscală", c.cif),
+    ("județ", c.judet),
+    ("loc.", c.localitate),
+    ("cod poștal", c.codPostal),
+    ("sector", c.sector),
+    ("str.", c.strada),
+    ("nr.", c.nr),
+    ("bloc", c.bloc),
+    ("scara", c.scara),
+    ("etaj", c.etaj),
+    ("ap.", c.apartament),
+    ("tel.", c.telefon),
+    ("fax", c.fax),
+    ("adresă de e-mail", c.email),
+  ),
+  registru,
+  ..fields(("cont IBAN", c.iban), ("deschis la", c.banca)),
+).filter(x => x != none)
+
+#h(1.5em)#antet.join[, ], declar că:
 
 // ── Участки: только заявленные ──
 #for (i, t) in d.terenuri.enumerate() [
