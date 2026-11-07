@@ -91,6 +91,15 @@ describe('dossierSchema', () => {
     expect(issuePaths({ ...sample, company: { ...sample.company, seat } })).toEqual(['company.seat.postalCode'])
   })
 
+  it('сектор в графе județ (как в старых черновиках) переносится в «satul/sectorul»', () => {
+    const seat = { ...sample.company.seat, county: 'Sector 2', district: '' }
+    expect(dossierSchema.parse({ ...sample, company: { ...sample.company, seat } }).company.seat).toMatchObject({
+      county: 'București',
+      locality: 'București',
+      district: 'Sector 2',
+    })
+  })
+
   it('«alte modalități» требует уточнения', () => {
     const deeds = [{ ...sample.deeds[0]!, form: 'other' }, sample.deeds[1]!]
     expect(issuePaths({ ...sample, deeds })).toEqual(['deeds.0.formOther'])

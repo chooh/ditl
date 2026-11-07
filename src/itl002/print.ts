@@ -1,7 +1,7 @@
 import { acquiredOn, allowedUses, VALUE_SOURCES, type AcquisitionForm, type Dossier, type Use, type ValueSource } from '../dossier/schema'
 import type { Address } from '../form/common'
 import { formatDate, formatMoney, sectorNumber } from '../pdf/format'
-import { attachmentsOf, deedOf } from '../print/common'
+import { attachmentsOf, countyOrSector, deedOf, fullLocality, localityLine } from '../print/common'
 
 /** Варианты «Forma de dobândire» бланка — ключи шаблона. */
 const FORM: Record<AcquisitionForm, string> = {
@@ -23,8 +23,8 @@ export const roAddress = (a: Address) => ({
   scara: a.entrance,
   etaj: a.floor,
   apartament: a.apartment,
-  localitate: a.locality,
-  judet: a.county,
+  localitate: localityLine(a),
+  judet: countyOrSector(a),
   tara: a.country,
 })
 
@@ -62,7 +62,8 @@ export function toPrintData(d: Dossier, index: number) {
       telefon: [c.phone, c.fax].filter(Boolean).join(' / '),
       email: c.email,
       sediu: roAddress(c.seat),
-      corespondenta: roAddress(c.correspondence),
+      // У адреса для переписки на бланке нет графы «Județul/Sectorul».
+      corespondenta: { ...roAddress(c.correspondence), localitate: fullLocality(c.correspondence) },
       comunicareEmail: c.emailOnly === 'yes' ? 'da' : 'nu',
     },
     // Раздел II — только если подписывает împuternicit, а не законный представитель.

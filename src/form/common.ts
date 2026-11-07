@@ -101,19 +101,29 @@ export const tradeRegisterNumber = z
   .refine((s) => s === '' || /^[JFC]\d{13}$/.test(s) || /^[JFC]\d{1,2}\/\d{1,6}\/\d{4}$/.test(s), 'Formatul este J2026123456002 (pe certificatele vechi: J40/1234/2006)')
   .pipe(z.string().max(30))
 
-/** Почтовый адрес: все поля; какие из них показывать — решает форма. */
-export const address = z.object({
-  street: text(80), // strada
-  number: text(10), // nr.
-  postalCode: text(10), // cod poștal
-  block: text(10), // bloc
-  entrance: text(10), // scara
-  floor: text(5), // etaj
-  apartment: text(10), // apartament
-  locality: text(60), // localitatea
-  county: text(40), // județul / sectorul
-  country: text(40), // țara
-})
+/**
+ * Почтовый адрес: все поля; какие из них показывать — решает форма. Населённый пункт —
+ * по иерархии SIRUTA (src/address): județ → municipiu/oraș/comună → sat/sector.
+ */
+export const address = z
+  .object({
+    street: text(80), // strada
+    number: text(10), // nr.
+    postalCode: text(10), // cod poștal
+    block: text(10), // bloc
+    entrance: text(10), // scara
+    floor: text(5), // etaj
+    apartment: text(10), // apartament
+    county: text(40), // județul; у Бухареста — București
+    locality: text(60), // municipiul / orașul / comuna
+    district: text(40), // satul / sectorul
+    country: text(40), // țara
+  })
+  .transform((a) => {
+    // Раньше графа была «Județul/Sectorul», и сектор писали в неё: «Sector 2» → București, Sector 2.
+    const sector = /^sector(?:ul)?\s*(\d)$/i.exec(a.county)?.[1]
+    return sector && !a.district ? { ...a, county: 'București', district: `Sector ${sector}` } : a
+  })
 export type Address = z.output<typeof address>
 export type AddressInput = z.input<typeof address>
 
@@ -125,8 +135,9 @@ export const emptyAddress = (country = ''): AddressInput => ({
   entrance: '',
   floor: '',
   apartment: '',
-  locality: '',
   county: '',
+  locality: '',
+  district: '',
   country,
 })
 

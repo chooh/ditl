@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState, type MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { FormProvider, useForm, useFormContext, type FieldErrors } from 'react-hook-form'
+import { loadLocalities } from './address/siruta'
 import { documentsFor } from './documents'
 import { Fields } from './dossier/Fields'
 import { sampleDossier } from './dossier/sample'
@@ -94,6 +95,7 @@ function AppHeader({ onHome }: { onHome: () => void }) {
 /**
  * OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
  * раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс.
+ * CC BY 4.0 справочника SIRUTA (src/address) — указать источник, лицензию и что данные изменены.
  */
 function Footer() {
   return (
@@ -106,7 +108,11 @@ function Footer() {
       <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
         SIL Open Font License 1.1
       </Link>
-      .
+      . Lista localităților: SIRUTA © Institutul Național de Statistică, sub licența{' '}
+      <Link href="https://creativecommons.org/licenses/by/4.0/deed.ro" size="sm" inline>
+        CC BY 4.0
+      </Link>
+      ; denumirile sunt adaptate pentru adrese.
     </footer>
   )
 }
@@ -128,11 +134,12 @@ function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout:
     setError(undefined)
     setSubmitFailed(false)
     try {
-      // Шаблоны и логотип (~70 КБ) — отдельным чанком, только когда документы нужны.
-      const [{ bundleTypst }] = await Promise.all([import('./typst/bundle'), wait(MIN_GENERATING_MS)])
+      // Шаблоны и логотип (~70 КБ) — отдельным чанком, только когда документы нужны;
+      // справочник SIRUTA к этому времени обычно уже загружен полями адреса.
+      const [{ bundleTypst }, localities] = await Promise.all([import('./typst/bundle'), loadLocalities(), wait(MIN_GENERATING_MS)])
       const date = formatDate(todayIso())
       setDocs(
-        documentsFor(data).map(({ template, title, label, filename, data }) => ({
+        documentsFor(data, localities).map(({ template, title, label, filename, data }) => ({
           label,
           filename,
           source: bundleTypst(template, data, { title, filename: `${filename}.typ`, date }),

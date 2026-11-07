@@ -49,6 +49,7 @@ src/
   documents.ts          какие документы собираются из досье: ITL 002 на объект + одна ITL 004
   itl002/, itl004/      print.ts — досье → данные для шаблона
   form/common.ts        общие части схемы: текст, даты, суммы, адрес, приложения, CIF/CUI/CNP/IBAN
+  address/              справочник населённых пунктов SIRUTA: siruta.json, поиск, поле «Caută localitatea»
   form/validators.ts    CUI, CNP, IBAN (контрольные цифры), суммы в леях, диакритика ș/ț
   form/fields.tsx       поля формы, адресный блок, приложения
   form/sections.tsx     разделы-шаги мастера: открытый шаг, статус (готово / ошибки), сводка
@@ -59,6 +60,9 @@ src/
   output/Result.tsx     экран результата: список .typ, кнопка загрузки компилятора, выбор документа для PDF
   output/PdfView.tsx    ленивый чанк: компилятор Typst, предпросмотр и «Descarcă PDF»
   assets/fonts/         Liberation Sans/Serif (OFL), метрически совместимы с Arial/Times бланков
+
+scripts/
+  siruta.ts             SIRUTA (CSV INS) → src/address/siruta.json
 
 public/
   LICENSE-Liberation.txt  тексты OFL 1.1; Vite кладёт их в корень dist/ (см. «Лицензия шрифтов»)
@@ -113,6 +117,40 @@ typst.ts 0.7.0 (внутри Typst 0.14) закреплён точной вер�
   функции для известных тел; если обвязка в новой версии изменится, сборка остановится.
 
 Для WebAssembly в CSP добавлен `'wasm-unsafe-eval'`.
+
+### Населённые пункты (SIRUTA)
+
+В каждом адресе — фирмы, адресе для переписки, домициле подписанта и адресе объекта —
+есть поиск «Caută localitatea» по справочнику SIRUTA (INS). Выбор заполняет графы
+«Județul» (у адреса объекта её нет), «Municipiul / orașul / comuna» и «Satul / sectorul»,
+а под поиском показывает, что это за пункт: «Sector al municipiului București»,
+«Municipiu, județul Alba», «Sat aparținând comunei Ciugud, județul Alba». Так видно, что
+идёт в «oraș», а что в «sector» или «sat»:
+
+| Выбрано               | Județul   | Municipiul / orașul / comuna | Satul / sectorul |
+| --------------------- | --------- | ---------------------------- | ---------------- |
+| București, Sector 2   | București | București                    | Sector 2         |
+| mun. Alba Iulia       | Alba      | Alba Iulia                   | —                |
+| Drâmbar, com. Ciugud  | Alba      | Ciugud                       | Drâmbar          |
+
+Графы остаются редактируемыми (адрес за границей, расхождения в написании); если
+значения не находятся в SIRUTA, поиск предупреждает, но не блокирует.
+
+RENNS (Registrul Electronic Național al Nomenclaturilor Stradale, ANCPI) подключить
+нельзя: публичного API нет — веб-сервисы ANCPI выдаёт учреждениям по протоколу, — да
+и запрос отправлял бы адрес третьей стороне, а CSP разрешает только свой origin.
+Поэтому справочник встроен в сборку и улиц не содержит.
+
+Справочник — отдельный чанк (≈ 300 КБ, по сети ≈ 85 КБ), загружается при первом
+показе адреса. Данные — «SIRUTA_s1 2026» с [data.gov.ro](https://data.gov.ro/dataset/siruta_s1-2026)
+под CC BY 4.0 (атрибуция — в футере). Обновить:
+
+```sh
+node scripts/siruta.ts siruta_s1_2026.csv   # CSV с data.gov.ro → src/address/siruta.json
+```
+
+Скрипт приводит имена к обычному написанию («VALEA LUI MIHAI» → «Valea lui Mihai»,
+ş/ţ → ș/ț) и сохраняет иерархию județ → UAT → localitate с кодами TIP.
 
 ### Разделы формы
 
@@ -175,10 +213,22 @@ typst.ts 0.7.0 (внутри Typst 0.14) закреплён точной вер�
   împuternicit; у законного представителя раздел пустой. В ITL 004 подписант —
   «Subsemnatul…», а если не указан Director P.J., под подписью печатается он же.
 - Телефон и факс фирмы в ITL 002 — в одной графе «Numărul tel./fax».
-- «Satul/sectorul» объекта: «Sector 2» и «2» печатаются в ITL 004 как «sectorul 2»,
-  в графе «Localitate/sector» ITL 002 — как «București, Sector 2».
-- «Județul/Sectorul» адреса фирмы и подписанта печатается в ITL 004 как в тексте
-  бланка: «Sector 2» → județ București, sector 2.
+- Адрес объекта: в графе «Localitate/sector» ITL 002 — «București, Sector 2»; в пунктах
+  участков ITL 004 — строкой, как в шапке (см. ниже): «un teren situat în municipiul
+  București, sectorul 2, Șos. Mihai Bravu nr. 200». Județ у объекта не спрашивается, поэтому
+  при одноимённых пунктах в разных уездах печатаются только названия.
+- Адрес фирмы и подписанта в ITL 002: «Localitatea» — municipiul/orașul/comuna (у села —
+  «Drâmbar, Ciugud»), «Județul/Sectorul» — сектор у Бухареста («Sector 2»), иначе județ.
+  У адреса для переписки на бланке одна графа — туда идёт всё: «București, Sector 2»,
+  «Drâmbar, Ciugud, jud. Alba».
+- В шапке ITL 004 домициль подписанта и sediu фирмы (и адреса участков) печатаются строкой, без подписей бланка
+  «municipiul/orașul/comuna», «satul/sectorul» и без «România»: тип пункта берётся из SIRUTA —
+  «municipiul București, sectorul 2, Str. Lizeanu nr. 21, …», «municipiul Brașov, județul Brașov, …»,
+  «satul Drâmbar, comuna Ciugud, județul Alba, …». «str.» добавляется, только если в улице
+  нет своего типа («Bd.», «Șos.», «Str.»…). Пункта нет в SIRUTA или адрес за границей —
+  печатаются только названия.
+- Сектор, записанный в графу «Județul» (так было в черновиках до SIRUTA), переносится
+  в «Satul / sectorul»: «Sector 2» → județ București, sector 2.
 - Приложения: в ITL 002 объекта — общие, его акта и его самого; в ITL 004 — все;
   повторы убираются.
 

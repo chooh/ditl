@@ -2,7 +2,8 @@
 // Текст — по бланку ITL004-Teren-PJ.docx. Отличия от бланка:
 // - пункты «1. începând cu data de…» и строки таблицы печатаются только для заявленных участков;
 // - из «dobândit/închiriat/concesionat/…» остаётся только выбранный вариант;
-// - в шапке незаполненные поля не печатаются вместе с подписью.
+// - в шапке незаполненные поля не печатаются вместе с подписью; адреса в шапке и у участков —
+//   строкой с типом населённого пункта («municipiul Brașov, județul Brașov») вместо «municipiul/orașul/comuna».
 
 #import "common.typ": *
 
@@ -45,7 +46,6 @@
 // Незаполненные поля не печатаются вместе с подписью: без подъезда нет и «sc. ……».
 #let fields(..pairs) = pairs.pos().filter(((_, value)) => value != "").map(((label, value)) => [#label #blank(value)])
 
-#let domiciliu = if r.tara == "" or r.tara == "România" [România] else [România / #blank(r.tara)]
 #let registru = if c.registruComertului != "" or c.nrRegistruComertului != "" {
   (
     [înregistrat la registrul comerțului],
@@ -59,32 +59,11 @@
   [identificat prin actul de identitate #blank(r.actTip)],
   ..fields(("seria", r.serie)),
   [nr. #blank(r.numar)#if r.cnp != "" [ și codul numeric personal #blank(r.cnp)]],
-  [domiciliat în #domiciliu],
-  ..fields(
-    ("județul", r.judet),
-    ("codul poștal", r.codPostal),
-    ("municipiul/orașul/comuna", r.localitate),
-    ("satul/sectorul", r.sector),
-    ("str.", r.strada),
-    ("nr.", r.nr),
-    ("bl.", r.bloc),
-    ("sc.", r.scara),
-    ("et.", r.etaj),
-    ("ap.", r.apartament),
-  ),
+  [domiciliat în #blank(r.domiciliu, width: 8cm)],
   [în calitate de reprezentant al #strong(blank(c.denumire, width: 5cm))],
   ..fields(
     ("Codul de identificare fiscală", c.cif),
-    ("județ", c.judet),
-    ("loc.", c.localitate),
-    ("cod poștal", c.codPostal),
-    ("sector", c.sector),
-    ("str.", c.strada),
-    ("nr.", c.nr),
-    ("bloc", c.bloc),
-    ("scara", c.scara),
-    ("etaj", c.etaj),
-    ("ap.", c.apartament),
+    ("cu sediul în", c.sediu),
     ("tel.", c.telefon),
     ("fax", c.fax),
     ("adresă de e-mail", c.email),
@@ -98,8 +77,7 @@
 // ── Участки: только заявленные ──
 #for (i, t) in d.terenuri.enumerate() [
   #h(1.5em)#(i + 1). începând cu data de #blank(t.dataDobandirii) prin actul nr. #blank(t.nrAct)
-  din #blank(t.dataAct), am #t.forma un teren situat în comuna/orașul/municipiul #blank(t.localitate, width: 4cm)
-  satul/sectorul #blank(t.sector), str. #blank(t.strada, width: 4cm), nr. #blank(t.nr, width: 1cm),
+  din #blank(t.dataAct), am #t.forma un teren situat în #blank(t.adresa, width: 8cm),
   înregistrat în REGISTRUL AGRICOL #blank(t.registruPerioada, width: 2cm), TIPUL #blank(t.registruTip, width: 1cm),
   VOL #blank(t.registruVolum, width: 1cm), POZIȚIA NR. #blank(t.registruPozitie, width: 1.5cm),
   cota de proprietate #blank(t.cota), coproprietari: #blank(t.coproprietari, width: 8cm).

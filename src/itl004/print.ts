@@ -1,6 +1,7 @@
 import { acquiredOn, fullName, LAND_CATEGORIES, type AcquisitionForm, type Dossier, type LandCategory, type Property } from '../dossier/schema'
-import { formatArea, formatDate, formatIban, sectorNumber, splitSector } from '../pdf/format'
-import { attachmentsOf, deedOf } from '../print/common'
+import { formatArea, formatDate, formatIban } from '../pdf/format'
+import type { Locality } from '../address/siruta'
+import { addressText, attachmentsOf, deedOf } from '../print/common'
 
 /** «am dobândit/închiriat/concesionat/preluat în administrare/preluat în folosință un teren». */
 const FORM: Record<Exclude<AcquisitionForm, 'other'>, string> = {
@@ -41,11 +42,8 @@ export const propertyAddressLine = (p: Pick<Property, 'address'>) => {
  * объектами досье, по пункту и строке таблицы на объект; всё уже строками в печатном
  * виде. Форма данных — как в src/typst/samples/itl004.json.
  */
-export function toPrintData(d: Dossier) {
+export function toPrintData(d: Dossier, localities: Locality[]) {
   const { signatory: s, company: c } = d
-  const domiciliu = splitSector(s.address.county)
-  const sediu = splitSector(c.seat.county)
-  const { street, number, block, entrance, floor, apartment, postalCode, locality } = s.address
 
   return {
     // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
@@ -57,29 +55,13 @@ export function toPrintData(d: Dossier) {
       serie: s.idDocument.series,
       numar: s.idDocument.number,
       cnp: s.personalId,
-      tara: s.address.country,
-      ...domiciliu,
-      codPostal: postalCode,
-      localitate: locality,
-      strada: street,
-      nr: number,
-      bloc: block,
-      scara: entrance,
-      etaj: floor,
-      apartament: apartment,
+      // Адреса — строкой: подписи бланка «municipiul/orașul/comuna», «satul/sectorul» заменяет тип пункта.
+      domiciliu: addressText(s.address, localities),
     },
     contribuabil: {
       denumire: c.name,
       cif: c.taxId,
-      ...sediu,
-      localitate: c.seat.locality,
-      codPostal: c.seat.postalCode,
-      strada: c.seat.street,
-      nr: c.seat.number,
-      bloc: c.seat.block,
-      scara: c.seat.entrance,
-      etaj: c.seat.floor,
-      apartament: c.seat.apartment,
+      sediu: addressText(c.seat, localities),
       telefon: c.phone,
       fax: c.fax,
       email: c.email,
@@ -92,15 +74,14 @@ export function toPrintData(d: Dossier) {
     terenuri: d.properties.map((p) => {
       const deed = deedOf(d, p)
       const { land } = p
+      const { street, number, locality, district } = p.address
       return {
         dataDobandirii: formatDate(acquiredOn(deed)),
         nrAct: deed.number,
         dataAct: formatDate(deed.date),
         forma: deed.form === 'other' ? deed.formOther : FORM[deed.form],
-        localitate: p.address.locality,
-        sector: sectorNumber(p.address.district) ?? p.address.district,
-        strada: p.address.street,
-        nr: p.address.number,
+        // Участок — без квартиры и подъезда; графы «comuna/orașul/municipiul», «satul/sectorul» — как в шапке.
+        adresa: addressText({ street, number, locality, district }, localities),
         // Registrul agricol заполняет налоговый орган — графы остаются пустыми.
         registruPerioada: '',
         registruTip: '',

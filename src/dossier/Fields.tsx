@@ -2,7 +2,8 @@ import { Accordion, AccordionItem, Button, ContainedList, ContainedListItem, For
 import { Add, TrashCan } from '@carbon/icons-react'
 import { Fragment, useState } from 'react'
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
-import { AddressFields, AttachmentsFields, ErrorText, RadioGroup, TextField } from '../form/fields'
+import { LocalityPicker } from '../address/LocalityPicker'
+import { AddressFields, AttachmentsFields, DISTRICT_TIP, ErrorText, RadioGroup, TextField } from '../form/fields'
 import { issuesText, Section, SubStep, useSections } from '../form/sections'
 import { formatDate } from '../pdf/format'
 import {
@@ -131,7 +132,7 @@ function CompanySection() {
         <AddressFields
           prefix="company.seat"
           section="seat"
-          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality', 'county', 'country']}
+          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'county', 'locality', 'district', 'country']}
         />
       </SubStep>
 
@@ -141,7 +142,7 @@ function CompanySection() {
         <AddressFields
           prefix="company.correspondence"
           section="correspondence"
-          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality']}
+          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'county', 'locality', 'district']}
         />
 
         <h4 className="subheading">Adresa de rezidență în alt stat decât România</h4>
@@ -215,7 +216,7 @@ function SignatorySection() {
         <AddressFields
           prefix="signatory.address"
           section="signatory"
-          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'locality', 'county', 'country']}
+          fields={['street', 'number', 'postalCode', 'block', 'entrance', 'floor', 'apartment', 'county', 'locality', 'district', 'country']}
         />
       </SubStep>
     </>
@@ -374,14 +375,9 @@ function PropertiesSection() {
                   <TextField name={`${p}.address.entrance`} label="Scara" autoComplete="off" />
                   <TextField name={`${p}.address.floor`} label="Etaj" autoComplete="off" />
                   <TextField name={`${p}.address.apartment`} label="Ap." autoComplete="off" />
-                  <TextField name={`${p}.address.locality`} label="Comuna / orașul / municipiul" autoComplete="off" />
-                  <TextField
-                    name={`${p}.address.district`}
-                    label="Satul / sectorul"
-                    placeholder="ex. Sector 2"
-                    autoComplete="off"
-                    tip="În București scrieți sectorul, de exemplu „Sector 2”."
-                  />
+                  <LocalityPicker prefix={`${p}.address`} withCounty={false} />
+                  <TextField name={`${p}.address.locality`} label="Municipiul / orașul / comuna" autoComplete="off" />
+                  <TextField name={`${p}.address.district`} label="Satul / sectorul" autoComplete="off" tip={DISTRICT_TIP} />
                 </div>
               </FormGroup>
             </SubStep>

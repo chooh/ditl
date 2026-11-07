@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatIban, formatMoney, sectorNumber, splitSector } from './format'
+import { formatDate, formatIban, formatMoney, sectorNumber } from './format'
 
 describe('форматирование для печати', () => {
   it('дата', () => {
@@ -15,12 +15,6 @@ describe('форматирование для печати', () => {
   })
 
   it('IBAN группами по 4', () => expect(formatIban('RO49AAAA1B31007593840000')).toBe('RO49 AAAA 1B31 0075 9384 0000'))
-
-  it('сектор Бухареста отделяется от уезда', () => {
-    expect(splitSector('Sector 2')).toEqual({ judet: 'București', sector: '2' })
-    expect(splitSector('sectorul 6')).toEqual({ judet: 'București', sector: '6' })
-    expect(splitSector('Ilfov')).toEqual({ judet: 'Ilfov', sector: '' })
-  })
 
   it('номер сектора из «satul/sectorul»', () => {
     expect(sectorNumber('Sector 2')).toBe('2')

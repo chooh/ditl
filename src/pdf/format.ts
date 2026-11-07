@@ -23,15 +23,6 @@ export function formatIban(iban: string): string {
 }
 
 /**
- * Поле «Județul/Sectorul» адреса → отдельные «județ» и «sector», как в тексте ITL 004:
- * «Sector 2» → județ București, sector 2; «Ilfov» → județ Ilfov, сектора нет.
- */
-export function splitSector(judetSector: string): { judet: string; sector: string } {
-  const m = /^sector(?:ul)?\s*(\d)$/i.exec(judetSector.trim())
-  return m ? { judet: 'București', sector: m[1]! } : { judet: judetSector, sector: '' }
-}
-
-/**
  * «Satul/sectorul» объекта → номер сектора Бухареста, если это сектор:
  * «Sector 2», «sectorul 2», «2» → «2»; село — undefined.
  */

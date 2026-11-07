@@ -132,7 +132,8 @@ describe('мастер', () => {
     await user.click(screen.getByRole('button', { name: 'Modifică: Imobilele: clădire și teren' }))
     await goToSub(user, 'Lista')
     await openItem(user, 'Imobilul 2')
-    await user.clear(input('Comuna / orașul / municipiul', 1))
+    const locality = () => within(screen.getByRole('group', { name: 'Imobilul 2' })).getByLabelText('Municipiul / orașul / comuna')
+    await user.clear(locality())
     await goTo(user, 'Verificare')
     expect(stepStatus('Imobile')).toBe('Imobile: 1 câmp de corectat')
     // Уйти с этого подэтапа — отправка всё равно откроет именно его.
@@ -144,7 +145,7 @@ describe('мастер', () => {
 
     expect(currentStep()).toBe('Imobilele: clădire și teren')
     expect(currentSubStep()).toBe('Imobilul 2 — actul și adresa')
-    expect(document.activeElement).toBe(input('Comuna / orașul / municipiul', 1))
+    expect(document.activeElement).toBe(locality())
     // У каждого TextInput Carbon есть (пустой) role="alert" — ищем общее сообщение формы.
     expect(screen.getByText(/conține erori/).closest('[role="alert"]')).toBeTruthy()
   })

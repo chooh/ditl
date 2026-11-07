@@ -1,3 +1,4 @@
+import type { Locality } from './address/siruta'
 import { unitAddress, type Dossier } from './dossier/schema'
 import { toPrintData as print002 } from './itl002/print'
 import { toPrintData as print004 } from './itl004/print'
@@ -16,8 +17,8 @@ export type DocumentSpec = {
   data: unknown
 }
 
-/** ITL 002 на каждый объект и одна ITL 004 на землю под всеми объектами. */
-export function documentsFor(d: Dossier): DocumentSpec[] {
+/** ITL 002 на каждый объект и одна ITL 004 на землю под всеми объектами; `localities` — справочник SIRUTA. */
+export function documentsFor(d: Dossier, localities: Locality[]): DocumentSpec[] {
   const cui = d.company.uniqueId
   const buildings = d.properties.map(
     (p, i): DocumentSpec => ({
@@ -34,7 +35,7 @@ export function documentsFor(d: Dossier): DocumentSpec[] {
     title: 'Declarație fiscală ITL 004',
     label: `ITL 004 — teren, ${n === 1 ? '1 imobil' : `${n} imobile`}`,
     filename: `ITL004_${cui}`,
-    data: print004(d),
+    data: print004(d, localities),
   }
   return [...buildings, land]
 }

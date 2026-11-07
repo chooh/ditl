@@ -1,7 +1,8 @@
 import { Button, RadioButton, RadioButtonGroup, TextInput } from '@carbon/react'
 import { Add, TrashCan } from '@carbon/icons-react'
-import { useId, type ComponentProps } from 'react'
+import { Fragment, useId, type ComponentProps } from 'react'
 import { Controller, useFieldArray, useFormContext, type Path } from 'react-hook-form'
+import { LocalityPicker } from '../address/LocalityPicker'
 import type { DossierInput } from '../dossier/schema'
 import { FieldTip } from '../help/Help'
 import { MAX_ATTACHMENTS } from './common'
@@ -99,15 +100,20 @@ const ADDRESS_FIELDS = {
   entrance: ['Scara', ''],
   floor: ['Etaj', ''],
   apartment: ['Apartament', ''],
-  locality: ['Localitatea', 'address-level2'],
-  county: ['Județul/Sectorul', 'address-level1'],
+  county: ['Județul', 'address-level1'],
+  locality: ['Municipiul / orașul / comuna', 'address-level2'],
+  district: ['Satul / sectorul', 'address-level3'],
   country: ['Țara', 'country-name'],
 } as const
+
+/** Пояснение к графе «Satul / sectorul» — у всех адресов одинаковое. */
+export const DISTRICT_TIP = 'În București — sectorul, de exemplu „Sector 2”; la sat — numele satului; la oraș sau municipiu rămâne gol.'
 export type AddressField = keyof typeof ADDRESS_FIELDS
 
 /**
  * Поля почтового адреса. `section` — токен автозаполнения (section-*), чтобы браузер
- * не путал адрес фирмы, адрес для переписки и домициль подписанта.
+ * не путал адрес фирмы, адрес для переписки и домициль подписанта. Перед графами
+ * населённого пункта — поиск по SIRUTA, который их заполняет.
  */
 export function AddressFields({
   prefix,
@@ -118,19 +124,24 @@ export function AddressFields({
   fields: readonly AddressField[]
   section: string
 }) {
+  const withCounty = fields.includes('county')
+  const pickerBefore = withCounty ? 'county' : 'locality'
   return (
     <div className="grid">
       {fields.map((key) => {
         const [label, token] = ADDRESS_FIELDS[key]
         return (
-          <TextField
-            key={key}
-            name={`${prefix}.${key}`}
-            label={label}
-            wide={key === 'street'}
-            autoComplete={token ? `section-${section} ${token}` : 'off'}
-            inputMode={key === 'postalCode' ? 'numeric' : undefined}
-          />
+          <Fragment key={key}>
+            {key === pickerBefore && <LocalityPicker prefix={prefix} withCounty={withCounty} />}
+            <TextField
+              name={`${prefix}.${key}`}
+              label={label}
+              wide={key === 'street'}
+              autoComplete={token ? `section-${section} ${token}` : 'off'}
+              inputMode={key === 'postalCode' ? 'numeric' : undefined}
+              tip={key === 'district' ? DISTRICT_TIP : undefined}
+            />
+          </Fragment>
         )
       })}
     </div>

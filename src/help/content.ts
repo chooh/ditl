@@ -60,7 +60,10 @@ export const HELP = {
   'company.seat': {
     title: 'Sediul social',
     short: 'Adresa sediului, așa cum apare în certificatul ONRC.',
-    tips: ['Pentru România, codul poștal are 6 cifre.', 'În București, la „Județul/Sectorul” scrieți, de exemplu, „Sector 2”.'],
+    tips: [
+      'Pentru România, codul poștal are 6 cifre.',
+      'Căutați localitatea în lista SIRUTA — județul, municipiul/orașul/comuna și satul/sectorul se completează singure. În București: județul și municipiul București, sectorul — de exemplu „Sector 2”.',
+    ],
   },
   'company.other': {
     title: 'Alte adrese',
@@ -119,7 +122,7 @@ export const HELP = {
     tips: [
       'Pentru fiecare imobil se generează o declarație ITL 002 separată.',
       'Apartamentul și locul de parcare din același bloc sunt imobile separate — adăugați-le pe rând.',
-      'La „Satul / sectorul” scrieți „Sector 2” — aplicația îl tipărește corect în ambele declarații.',
+      'Căutați localitatea în lista SIRUTA: pentru București alegeți sectorul, de exemplu „București, Sector 2” — aplicația îl tipărește corect în ambele declarații.',
     ],
   },
   'property.building': {
