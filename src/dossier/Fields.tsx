@@ -1,4 +1,4 @@
-import { Accordion, AccordionItem, Button, ContainedList, ContainedListItem, FormGroup, RadioButton, RadioButtonGroup, Select, SelectItem, Tag } from '@carbon/react'
+import { Accordion, AccordionItem, Button, ContainedList, ContainedListItem, RadioButton, RadioButtonGroup, Select, SelectItem, Tag } from '@carbon/react'
 import { Add, TrashCan } from '@carbon/icons-react'
 import { Fragment, useState } from 'react'
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
@@ -251,9 +251,7 @@ function DeedsSection() {
           <p className="hint">
             Contractele de vânzare-cumpărare și alte acte prin care au fost dobândite imobilele. Un act poate cuprinde mai multe imobile.
           </p>
-          <FormGroup className="parcel" legendText={`Actul ${i + 1}`}>
-            <DeedFields index={i} />
-          </FormGroup>
+          <DeedFields index={i} />
         </SubStep>
       ))}
 
@@ -357,7 +355,7 @@ function PropertiesSection() {
     <>
       {fields.map((field, i) => {
         const p = `properties.${i}` as const
-        const legend = `Imobilul ${i + 1}`
+        const label = `Imobilul ${i + 1}`
         return (
           <Fragment key={field.id}>
             <SubStep id={propertyStep(i, 'address')}>
@@ -365,41 +363,31 @@ function PropertiesSection() {
                 Pentru fiecare imobil se generează o declarație ITL 002 (clădirea); terenul aferent tuturor imobilelor intră într-o singură
                 declarație ITL 004.
               </p>
-              <FormGroup className="parcel" legendText={legend}>
-                <DeedSelect index={i} />
-                <h4 className="subheading">Adresa</h4>
-                <div className="grid">
-                  <TextField name={`${p}.address.street`} label="Strada" wide autoComplete="off" />
-                  <TextField name={`${p}.address.number`} label="Nr." autoComplete="off" />
-                  <TextField name={`${p}.address.block`} label="Bloc" autoComplete="off" />
-                  <TextField name={`${p}.address.entrance`} label="Scara" autoComplete="off" />
-                  <TextField name={`${p}.address.floor`} label="Etaj" autoComplete="off" />
-                  <TextField name={`${p}.address.apartment`} label="Ap." autoComplete="off" />
-                  <LocalityPicker prefix={`${p}.address`} withCounty={false} />
-                  <TextField name={`${p}.address.locality`} label="Municipiul / orașul / comuna" autoComplete="off" />
-                  <TextField name={`${p}.address.district`} label="Satul / sectorul" autoComplete="off" tip={DISTRICT_TIP} />
-                </div>
-              </FormGroup>
+              <DeedSelect index={i} />
+              <h4 className="subheading">Adresa</h4>
+              <div className="grid">
+                <TextField name={`${p}.address.street`} label="Strada" wide autoComplete="off" />
+                <TextField name={`${p}.address.number`} label="Nr." autoComplete="off" />
+                <TextField name={`${p}.address.block`} label="Bloc" autoComplete="off" />
+                <TextField name={`${p}.address.entrance`} label="Scara" autoComplete="off" />
+                <TextField name={`${p}.address.floor`} label="Etaj" autoComplete="off" />
+                <TextField name={`${p}.address.apartment`} label="Ap." autoComplete="off" />
+                <LocalityPicker prefix={`${p}.address`} withCounty={false} />
+                <TextField name={`${p}.address.locality`} label="Municipiul / orașul / comuna" autoComplete="off" />
+                <TextField name={`${p}.address.district`} label="Satul / sectorul" autoComplete="off" tip={DISTRICT_TIP} />
+              </div>
             </SubStep>
             <SubStep id={propertyStep(i, 'building')}>
-              <FormGroup className="parcel" legendText={`${legend} — clădirea (ITL 002)`}>
-                <BuildingFields index={i} />
-              </FormGroup>
+              <BuildingFields index={i} />
             </SubStep>
             <SubStep id={propertyStep(i, 'values')}>
-              <FormGroup className="parcel" legendText={`${legend} — valoarea clădirii`}>
-                <ValueTable index={i} />
-              </FormGroup>
+              <ValueTable index={i} />
             </SubStep>
             <SubStep id={propertyStep(i, 'land')}>
-              <FormGroup className="parcel" legendText={`${legend} — terenul aferent (ITL 004)`}>
-                <LandFields index={i} />
-              </FormGroup>
+              <LandFields index={i} />
             </SubStep>
             <SubStep id={propertyStep(i, 'annex')}>
-              <FormGroup className="parcel" legendText={`${legend} — documente anexate`}>
-                <AttachmentsFields name={`${p}.attachments`} label={legend} />
-              </FormGroup>
+              <AttachmentsFields name={`${p}.attachments`} label={label} />
             </SubStep>
           </Fragment>
         )

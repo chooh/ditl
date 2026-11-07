@@ -136,7 +136,8 @@ describe('мастер', () => {
     await user.click(screen.getByRole('button', { name: 'Modifică: Imobilele: clădire și teren' }))
     await goToSub(user, 'Lista')
     await openItem(user, 'Imobilul 2')
-    const locality = () => within(screen.getByRole('group', { name: 'Imobilul 2' })).getByLabelText('Municipiul / orașul / comuna')
+    // Открыт только подэтап второго объекта: поля скрытых подэтапов getByRole не видит.
+    const locality = () => screen.getByRole('textbox', { name: 'Municipiul / orașul / comuna' })
     await user.clear(locality())
     await goTo(user, 'Verificare')
     expect(stepStatus('Imobile')).toBe('Imobile: 1 câmp de corectat')
@@ -305,7 +306,6 @@ describe('акты и объекты', () => {
 
     // Новый объект сразу открыт.
     expect(currentSubStep()).toBe('Imobilul 2 — actul și adresa')
-    expect(screen.getByRole('group', { name: 'Imobilul 2' })).toBeTruthy()
     expect(input('Strada', 4).value).toBe('Șos. Mihai Bravu')
     expect((screen.getAllByLabelText('Dobândit prin')[1] as HTMLSelectElement).selectedOptions[0]!.textContent).toBe('Actul 1 nr. 1234/2023')
   })

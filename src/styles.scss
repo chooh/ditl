@@ -363,20 +363,6 @@ body {
   }
 }
 
-.parcel {
-  // У fieldset по умолчанию min-inline-size: min-content — на телефоне он вылезал за экран.
-  min-inline-size: 0;
-  margin-block-end: $spacing-05;
-  padding: $spacing-05;
-  border: 1px solid theme.$border-subtle;
-  background: theme.$layer-01;
-}
-
-.parcel > legend {
-  @include type.type-style('heading-compact-01');
-  color: theme.$text-primary;
-}
-
 .indicator {
   padding-block-start: $spacing-04;
   border-block-start: 1px solid theme.$border-subtle;
