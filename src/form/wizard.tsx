@@ -1,4 +1,4 @@
-import { Button, ButtonSet, ContainedList, ContainedListItem, ProgressIndicator, ProgressStep, Select, SelectItem } from '@carbon/react'
+import { Button, ButtonSet, ContainedList, ContainedListItem, ProgressBar, ProgressIndicator, ProgressStep, Select, SelectItem } from '@carbon/react'
 import { ArrowLeft, ArrowRight, Edit } from '@carbon/icons-react'
 import { useId, type ReactNode } from 'react'
 import { issuesText, REVIEW, StatusTag, StepPanel, statusOf, useSections, type SectionState } from './sections'
@@ -22,7 +22,7 @@ const statusText = (s: SectionState) => {
 }
 
 /**
- * Шаги мастера: на широком экране — вертикальный Carbon ProgressIndicator,
+ * Шаги мастера: общий прогресс, на широком экране — вертикальный Carbon ProgressIndicator,
  * на узком — компактный выбор шага (восемь шагов столбиком заняли бы весь экран).
  */
 export function StepIndicator() {
@@ -33,6 +33,14 @@ export function StepIndicator() {
 
   return (
     <nav className="wizard-nav" aria-label="Pașii dosarului">
+      <ProgressBar
+        className="wizard-progress"
+        size="small"
+        label="Progresul dosarului"
+        value={sections.done}
+        max={sections.total}
+        helperText={sections.done === sections.total ? 'Toate etapele sunt gata ✓' : `${sections.done} din ${sections.total} etape gata`}
+      />
       {/* currentIndex={-1}: иначе Carbon сам помечает все шаги до текущего готовыми,
           а здесь шаги заполняются в любом порядке — статусы задаются явно. */}
       <div className="wizard-steps">
@@ -81,24 +89,22 @@ export function StepIndicator() {
   )
 }
 
-const stepName = (id: string, list: SectionState[]) => (id === REVIEW ? REVIEW_STEP : list.find((s) => s.id === id)!.step)
-
 /**
- * «Înapoi» и «Continuă» под разделом; на последнем шаге вместо «Continuă» — `last` (отправка формы).
- * Fluid ButtonSet сам встаёт столбиком в узком контейнере и поднимает основную кнопку наверх.
+ * «Înapoi» и «Continuă» под разделом — по подэтапам; на последнем шаге вместо «Continuă» — `last`
+ * (отправка формы). Fluid ButtonSet сам встаёт столбиком в узком контейнере и поднимает основную кнопку наверх.
  */
 export function StepButtons({ last }: { last: ReactNode }) {
-  const { prev, next, list, go, advance } = useSections()
+  const { prev, next, advance, retreat } = useSections()
   return (
     <ButtonSet fluid className="wizard-buttons">
       {prev && (
-        <Button kind="secondary" size="lg" renderIcon={ArrowLeft} onClick={() => go(prev)}>
+        <Button kind="secondary" size="lg" renderIcon={ArrowLeft} onClick={retreat}>
           Înapoi
         </Button>
       )}
       {next ? (
         <Button kind="primary" size="lg" renderIcon={ArrowRight} onClick={advance}>
-          Continuă: {stepName(next, list)}
+          Continuă: {next.label}
         </Button>
       ) : (
         last

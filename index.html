@@ -2,11 +2,104 @@
 <html lang="ro">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="no-referrer" />
-    <title>Declarație fiscală ITL 002</title>
+    <title>Declarații fiscale ITL 002 și ITL 004</title>
+    <!-- Заставка, пока грузится приложение: стили здесь, а не в styles.scss — тот приходит вместе с JS. -->
+    <style>
+      .splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        background: #fff;
+        color: #161616;
+        font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        transition: opacity 0.35s;
+      }
+      .splash--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .splash-logo {
+        inline-size: 72px;
+        block-size: 72px;
+        animation: splash-pulse 1.6s ease-in-out infinite;
+      }
+      .splash-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      .splash-text {
+        margin: 0;
+        color: #525252;
+        font-size: 0.875rem;
+      }
+      .splash-bar {
+        position: relative;
+        overflow: hidden;
+        inline-size: 12rem;
+        block-size: 4px;
+        background: #e0e0e0;
+      }
+      .splash-bar::after {
+        content: '';
+        position: absolute;
+        inset-block: 0;
+        inline-size: 40%;
+        background: #0f62fe;
+        animation: splash-slide 1.2s ease-in-out infinite;
+      }
+      @keyframes splash-slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(300%);
+        }
+      }
+      @keyframes splash-pulse {
+        50% {
+          transform: scale(0.94);
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        .splash {
+          background: #161616;
+          color: #f4f4f4;
+        }
+        .splash-text {
+          color: #c6c6c6;
+        }
+        .splash-bar {
+          background: #393939;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .splash-logo,
+        .splash-bar::after {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" class="splash" role="status" aria-live="polite">
+      <svg class="splash-logo" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="14" fill="#0f62fe" />
+        <path d="M20 14h17l9 9v27H20z" fill="#fff" />
+        <path d="M37 14v9h9" fill="#a6c8ff" />
+        <path d="M25 31h16M25 37h16M25 43h10" stroke="#0f62fe" stroke-width="3" stroke-linecap="round" />
+      </svg>
+      <p class="splash-title">Declarații fiscale ITL</p>
+      <div class="splash-bar"></div>
+      <p class="splash-text">Se încarcă aplicația…</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

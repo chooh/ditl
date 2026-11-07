@@ -1,5 +1,18 @@
-import { Button, Column, Grid, Header, HeaderName, InlineNotification, Link, SkipToContent, Stack } from '@carbon/react'
-import { DocumentExport } from '@carbon/icons-react'
+import {
+  Button,
+  Column,
+  Grid,
+  Header,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
+  HeaderName,
+  InlineNotification,
+  Link,
+  Loading,
+  SkipToContent,
+  Stack,
+} from '@carbon/react'
+import { DocumentExport, Help } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -10,15 +23,21 @@ import { sampleDossier } from './dossier/sample'
 import { dossierSchema, emptyDossier, type Dossier, type DossierInput } from './dossier/schema'
 import { SECTIONS } from './dossier/sections'
 import { DraftsPanel, useDrafts, type Session } from './drafts/Drafts'
-import { loadActiveDraft } from './drafts/storage'
+import { listDrafts, loadActiveDraft } from './drafts/storage'
 import { todayIso } from './form/common'
 import { SectionsProvider, useSections } from './form/sections'
 import { Review, StepButtons, StepIndicator } from './form/wizard'
+import { HelpAside, HelpProvider, useHelp, useHelpTopic } from './help/Help'
 import { Result, type TypstDocument } from './output/Result'
 import { formatDate } from './pdf/format'
+import { isOnboarded, setOnboarded, Welcome } from './welcome/Welcome'
 
 /** Инструменты разработчика: в `npm run dev` всегда, в сборке — только с `?debug`. */
 const debugEnabled = import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug')
+
+/** Сборка документов почти мгновенна — экран «Se pregătesc…» держится хотя бы столько, чтобы не мелькать. */
+const MIN_GENERATING_MS = 700
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function App() {
   // Черновик, открытый в прошлый раз, восстанавливается сразу — без мелькания пустой формы.
@@ -26,9 +45,70 @@ export function App() {
     const draft = loadActiveDraft()
     return { key: 0, draft }
   })
+  // Приветствие — только совсем новому пользователю: без черновиков и не видевшему его раньше.
+  const [welcome, setWelcome] = useState(() => !session.draft && !isOnboarded() && listDrafts().length === 0)
   // Другой черновик или новое досье — форма пересоздаётся с нуля (key).
   const switchTo = (next: Session) => setSession((s) => ({ ...next, key: s.key + 1 }))
-  return <Editor key={session.key} session={session} onSwitch={switchTo} />
+  const start = (next?: Session) => {
+    setOnboarded()
+    setWelcome(false)
+    if (next) switchTo(next)
+    window.scrollTo(0, 0)
+  }
+
+  return (
+    <HelpProvider>
+      <AppHeader />
+      <Grid as="main" id="main-content" className="page">
+        <Column sm={4} md={8} lg={16}>
+          {welcome ? (
+            // Пример — отдельным черновиком, все разделы подтверждены.
+            <Welcome onStart={() => start()} onSample={() => start({ initial: sampleDossier(), confirmed: SECTIONS.map((s) => s.id) })} />
+          ) : (
+            <Editor key={session.key} session={session} onSwitch={switchTo} />
+          )}
+          <Footer />
+        </Column>
+      </Grid>
+    </HelpProvider>
+  )
+}
+
+function AppHeader() {
+  const help = useHelp()
+  return (
+    <Header aria-label="Declarații fiscale ITL">
+      <SkipToContent />
+      <HeaderName href="./" prefix="DITL">
+        Declarații fiscale
+      </HeaderName>
+      <HeaderGlobalBar>
+        <HeaderGlobalAction aria-label="Ajutor" tooltipAlignment="end" onClick={() => help?.open()}>
+          <Help size={20} />
+        </HeaderGlobalAction>
+      </HeaderGlobalBar>
+    </Header>
+  )
+}
+
+/**
+ * OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
+ * раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс.
+ */
+function Footer() {
+  return (
+    <footer className="page-footer">
+      Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
+      <Link href="LICENSE-Liberation.txt" size="sm" inline>
+        SIL Open Font License 1.1
+      </Link>
+      . Fonturi IBM Plex © 2017 IBM Corp., sub licența{' '}
+      <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
+        SIL Open Font License 1.1
+      </Link>
+      .
+    </footer>
+  )
 }
 
 type EditorProps = { session: Session; onSwitch: (next: Session) => void }
@@ -49,7 +129,7 @@ function Editor({ session, onSwitch }: EditorProps) {
     setSubmitFailed(false)
     try {
       // Шаблоны и логотип (~70 КБ) — отдельным чанком, только когда документы нужны.
-      const { bundleTypst } = await import('./typst/bundle')
+      const [{ bundleTypst }] = await Promise.all([import('./typst/bundle'), wait(MIN_GENERATING_MS)])
       const date = formatDate(todayIso())
       setDocs(
         documentsFor(data).map(({ template, title, label, filename, data }) => ({
@@ -65,67 +145,55 @@ function Editor({ session, onSwitch }: EditorProps) {
   }
 
   return (
-    <>
-      <Header aria-label="Declarații fiscale ITL">
-        <SkipToContent />
-        <HeaderName href="./" prefix="DITL">
-          Declarații fiscale
-        </HeaderName>
-      </Header>
-      <Grid as="main" id="main-content" className="page">
-        <Column sm={4} md={8} lg={16}>
-          <Stack gap={7}>
-          <div>
-            <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
-            <p className="lead">
-              Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil
-              și o declarație ITL 004 pentru terenul aferent tuturor imobilelor.
-            </p>
-          </div>
-          <InlineNotification
-            kind="info"
-            role="status"
-            lowContrast
-            hideCloseButton
-            title="Datele nu sunt trimise nicăieri:"
-            subtitle="documentele sunt generate direct în browserul dumneavoastră."
+    <Stack gap={7}>
+      {!docs && (
+        <div>
+          <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
+          <p className="lead editor-lead">
+            Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil și o
+            declarație ITL 004 pentru terenul aferent tuturor imobilelor.
+          </p>
+        </div>
+      )}
+      <InlineNotification
+        className="privacy-note"
+        kind="info"
+        role="status"
+        lowContrast
+        hideCloseButton
+        title="Datele nu sunt trimise nicăieri:"
+        subtitle="documentele sunt generate direct în browserul dumneavoastră."
+      />
+
+      {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
+
+      <FormProvider {...form}>
+        <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
+          {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
+          <DossierForm
+            session={session}
+            onSwitch={onSwitch}
+            hidden={!!docs}
+            onValid={onValid}
+            onInvalid={() => setSubmitFailed(true)}
+            error={error}
+            submitFailed={submitFailed}
           />
-
-          {docs && <Result docs={docs} onBack={() => setDocs(undefined)} />}
-
-          <FormProvider {...form}>
-            <SectionsProvider sections={SECTIONS} schema={dossierSchema}>
-              {/* Форма скрывается, а не размонтируется — введённые значения сохраняются. */}
-              <DossierForm
-                session={session}
-                onSwitch={onSwitch}
-                hidden={!!docs}
-                onValid={onValid}
-                onInvalid={() => setSubmitFailed(true)}
-                error={error}
-                submitFailed={submitFailed}
-              />
-            </SectionsProvider>
-          </FormProvider>
-
-          {/* OFL 1.1 требует распространять шрифты вместе с текстом лицензии, а сборка
-              раздаёт их файлами: Liberation — для PDF (src/typst/compiler.ts), IBM Plex — интерфейс. */}
-          <footer className="page-footer">
-            Fonturi Liberation © 2012 Red Hat, Inc., sub licența{' '}
-            <Link href="LICENSE-Liberation.txt" size="sm" inline>
-              SIL Open Font License 1.1
-            </Link>
-            . Fonturi IBM Plex © 2017 IBM Corp., sub licența{' '}
-            <Link href="LICENSE-IBM-Plex.txt" size="sm" inline>
-              SIL Open Font License 1.1
-            </Link>
-            .
-          </footer>
-          </Stack>
-        </Column>
-      </Grid>
-    </>
+        </SectionsProvider>
+      </FormProvider>
+    </Stack>
   )
+}
+
+/** Пути полей с ошибками: «properties.1.address.street», «deeds» (ошибка всего списка). */
+function errorPaths(errors: FieldErrors, prefix = ''): string[] {
+  return Object.entries(errors).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key
+    if (!value || typeof value !== 'object') return []
+    const own = typeof value.message === 'string' || typeof value.root?.message === 'string' ? [path] : []
+    const nested = Object.fromEntries(Object.entries(value).filter(([k]) => !['message', 'type', 'ref', 'types', 'root'].includes(k)))
+    return [...own, ...errorPaths(nested as FieldErrors, path)]
+  })
 }
 
 type DossierFormProps = EditorProps & {
@@ -140,11 +208,12 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
   const form = useFormContext<DossierInput, unknown, Dossier>()
   const sections = useSections()
   const drafts = useDrafts(session, onSwitch)
+  useHelpTopic(hidden ? undefined : sections.helpTopic)
 
   const onInvalid = (errors: FieldErrors) => {
-    // Синхронно открыть первый раздел с ошибками — сразу после этого react-hook-form
-    // ставит фокус на первое ошибочное поле, а в скрытый раздел он не попадёт.
-    flushSync(() => sections.openForKeys(Object.keys(errors)))
+    // Синхронно открыть раздел и подэтап с первой ошибкой — сразу после этого react-hook-form
+    // ставит фокус на первое ошибочное поле, а в скрытый подэтап он не попадёт.
+    flushSync(() => sections.openForPaths(errorPaths(errors)))
     onFailed()
   }
   // Сообщение следует за исправлениями: называет разделы, где ошибки остались, и исчезает с последней.
@@ -152,6 +221,7 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
 
   return (
     <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate hidden={hidden}>
+      {form.formState.isSubmitting && <Generating />}
       <Stack gap={6}>
         {debugEnabled && (
           <div className="dev-tools">
@@ -189,8 +259,22 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
               }
             />
           </div>
+          <HelpAside />
         </div>
       </Stack>
     </form>
+  )
+}
+
+/** Поверх формы, пока собираются документы. */
+function Generating() {
+  return (
+    <div className="generating" role="status" aria-live="polite">
+      <div className="generating-card">
+        <Loading withOverlay={false} small={false} description="Se pregătesc documentele" />
+        <p className="generating-title">Se pregătesc documentele…</p>
+        <p className="generating-text">Verificăm datele și completăm declarațiile ITL 002 și ITL 004.</p>
+      </div>
+    </div>
   )
 }

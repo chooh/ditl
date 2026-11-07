@@ -3,6 +3,7 @@ import { Add, TrashCan } from '@carbon/icons-react'
 import { useId, type ComponentProps } from 'react'
 import { Controller, useFieldArray, useFormContext, type Path } from 'react-hook-form'
 import type { DossierInput } from '../dossier/schema'
+import { FieldTip } from '../help/Help'
 import { MAX_ATTACHMENTS } from './common'
 
 /** Путь к полю досье: опечатка в имени поля — ошибка компиляции. */
@@ -23,26 +24,45 @@ type TextFieldProps = {
   label: string
   /** Поле на всю ширину строки сетки. */
   wide?: boolean
+  /** Пояснение под «i» у подписи. */
+  tip?: string
 } & Omit<ComponentProps<typeof TextInput>, 'id' | 'name' | 'labelText' | 'invalid' | 'invalidText'>
 
-export function TextField({ name, label, wide, ...input }: TextFieldProps) {
+export function TextField({ name, label, wide, tip, ...input }: TextFieldProps) {
   const { register } = useFormContext()
   const error = useFieldError(name)
   const id = useId()
-  return (
+  const field = (
     <TextInput
       {...input}
       {...register(name)}
       id={id}
-      className={wide ? 'wide' : undefined}
+      className={wide && !tip ? 'wide' : undefined}
       labelText={label}
       invalid={!!error}
       invalidText={error}
     />
   )
+  // «i» ставится поверх правого края подписи — обёртка становится ячейкой сетки.
+  return tip ? (
+    <div className={`field-with-tip${wide ? ' wide' : ''}`}>
+      {field}
+      <FieldTip label={label} text={tip} />
+    </div>
+  ) : (
+    field
+  )
 }
 
-export function RadioGroup({ name, legend, options }: { name: FieldPath; legend: string; options: readonly (readonly [string, string])[] }) {
+type RadioGroupProps = {
+  name: FieldPath
+  legend: string
+  options: readonly (readonly [string, string])[]
+  /** Пояснение под вариантами. */
+  tip?: string
+}
+
+export function RadioGroup({ name, legend, options, tip }: RadioGroupProps) {
   const { control } = useFormContext()
   const id = useId()
   return (
@@ -59,6 +79,7 @@ export function RadioGroup({ name, legend, options }: { name: FieldPath; legend:
           onBlur={field.onBlur}
           invalid={!!fieldState.error}
           invalidText={fieldState.error?.message}
+          helperText={tip}
         >
           {options.map(([value, label], i) => (
             // ref — на первую кнопку: на неё react-hook-form ставит фокус при ошибке.

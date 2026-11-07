@@ -2,13 +2,17 @@ import { Tag } from '@carbon/react'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
+import { InlineTip } from '../help/Help'
+import type { HelpTopic } from '../help/content'
 
 /**
  * Разделы формы-мастера: на экране один раздел, рядом — шаги со статусами (wizard.tsx),
- * последний шаг — проверка всего досье. Порядок заполнения не навязывается: на любой
- * шаг можно перейти, а уходя с раздела, пользователь видит его ошибки. Готовым раздел
- * считается, только когда в нём нет ошибок и пользователь подтвердил его кнопкой «Continuă»:
- * разделы без обязательных полей (скидки, приложения) иначе были бы «готовы» сразу.
+ * последний шаг — проверка всего досье. Раздел делится на подэтапы — короткие экраны
+ * по несколько полей; «Continuă» и «Înapoi» идут по подэтапам, а индикатор шагов — по
+ * разделам. Порядок заполнения не навязывается: на любой шаг можно перейти, а уходя
+ * с раздела или подэтапа, пользователь видит его ошибки. Готовым раздел считается, только
+ * когда в нём нет ошибок и пользователь прошёл его кнопкой «Continuă»: разделы без
+ * обязательных полей (скидки, приложения) иначе были бы «готовы» сразу.
  */
 export type SectionDef<V> = {
   id: string
@@ -18,6 +22,18 @@ export type SectionDef<V> = {
   /** Ключи верхнего уровня значений формы, которые относятся к разделу. */
   keys: readonly (keyof V & string)[]
   summary: (values: V) => string
+  /** Подэтапы раздела; зависят от значений — например, по подэтапу на каждый акт. */
+  subSteps: (values: V) => SubStepDef[]
+}
+
+export type SubStepDef = {
+  id: string
+  title: string
+  /** Пути полей подэтапа: ему принадлежат и все вложенные. */
+  fields: readonly string[]
+  /** Пути, которые принадлежат подэтапу без вложенных (ошибка «нет ни одного акта» — у списка). */
+  exact?: readonly string[]
+  help: HelpTopic
 }
 
 export const join = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ')
@@ -33,31 +49,56 @@ export type SectionState = {
   issues: number
   /** Пользователь уже уходил с раздела — только тогда показываем количество ошибок. */
   visited: boolean
-  /** Пользователь нажал в разделе «Continuă». */
+  /** Пользователь прошёл раздел кнопкой «Continuă». */
   confirmed: boolean
   summary: string
 }
+
+export type SubStepState = {
+  id: string
+  title: string
+  help: HelpTopic
+  issues: number
+  /** Пользователь уходил с подэтапа (или раздел уже пройден). */
+  visited: boolean
+  current: boolean
+}
+
+/** Куда ведут «Înapoi» и «Continuă». */
+type Target = { section: string; sub: string | undefined; label: string }
 
 type SectionsApi = {
   list: SectionState[]
   get(id: string): SectionState
   /** Открытый шаг: id раздела или REVIEW. */
   current: string
-  /** Соседние шаги открытого (undefined — края). */
-  prev: string | undefined
-  next: string | undefined
-  /** Перейти к шагу. Покинутый раздел проверяется: его ошибки видны в полях и в индикаторе. */
-  go(id: string): void
-  /** «Continuă»: подтвердить открытый раздел и перейти к следующему шагу. */
+  /** Подэтапы раздела со статусами. */
+  subSteps(section: string): SubStepState[]
+  /** Открытый (или последний открытый) подэтап раздела. */
+  subOf(section: string): string | undefined
+  /** Соседние подэтапы открытого — возможно, в соседнем разделе (undefined — края). */
+  prev: Target | undefined
+  next: Target | undefined
+  /** Перейти к шагу (и подэтапу). Покинутые раздел и подэтап проверяются: их ошибки видны в полях и в индикаторе. */
+  go(id: string, sub?: string): void
+  /** Перейти к подэтапу открытого раздела. */
+  goSub(sub: string): void
+  /** «Continuă»: к следующему подэтапу; покидая раздел, отметить его пройденным. */
   advance(): void
+  /** «Înapoi»: к предыдущему подэтапу. */
+  retreat(): void
   /** Подтверждённые разделы — сохраняются в черновике вместе со значениями. */
   confirmed: string[]
-  /** Растёт при переходе по шагам — по нему заголовок шага получает фокус. */
+  /** Растёт при переходе по шагам — по нему заголовок шага или подэтапа получает фокус. */
   navigation: number
-  /** Открыть первый раздел, к которому относятся ключи верхнего уровня (например, из ошибок формы). */
-  openForKeys(keys: string[]): void
+  /** Последний переход — внутри раздела: фокус на заголовок подэтапа, а не раздела. */
+  withinSection: boolean
+  /** Открыть раздел и подэтап с первым из путей (например, ошибочных полей формы). */
+  openForPaths(paths: string[]): void
   /** Для только что загруженных значений: открыть первый неготовый раздел или проверку. */
   resume(values: unknown, confirmed: readonly string[]): void
+  /** Тема подсказок открытого экрана. */
+  helpTopic: HelpTopic
   done: number
   total: number
 }
@@ -71,6 +112,12 @@ export function useSections(): SectionsApi {
 }
 
 const byId = <T,>(ids: readonly string[], value: T): Record<string, T> => Object.fromEntries(ids.map((id) => [id, value]))
+
+const owns = (sub: SubStepDef, path: string) =>
+  !!sub.exact?.includes(path) || sub.fields.some((f) => path === f || path.startsWith(`${f}.`))
+
+/** Ключ подэтапа среди всех разделов. */
+const subKey = (section: string, sub: string) => `${section}/${sub}`
 
 type Props<V> = {
   sections: readonly SectionDef<V>[]
@@ -89,69 +136,165 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   const steps = [...allIds, REVIEW]
   const sectionOfKey = new Map<string, string>(sections.flatMap((s) => s.keys.map((k) => [k, s.id] as const)))
   const [current, setCurrent] = useState(allIds[0]!)
+  /** Последний открытый подэтап каждого раздела. */
+  const [openSub, setOpenSub] = useState<Record<string, string>>({})
   const [navigation, setNavigation] = useState(0)
+  const [withinSection, setWithinSection] = useState(false)
   const [visited, setVisited] = useState(() => byId(allIds, false))
   const [confirmed, setConfirmed] = useState(() => byId(allIds, false))
+  const [visitedSubs, setVisitedSubs] = useState<Record<string, boolean>>({})
 
-  const countIssues = (v: unknown) => {
-    const issues = byId(allIds, 0)
+  const section = (id: string) => sections.find((s) => s.id === id)!
+  const subDefs = (id: string, v: V = values) => section(id).subSteps(v)
+  /** Подэтап, которому принадлежит путь; чужие пути — первому подэтапу раздела. */
+  const subForPath = (id: string, path: string, v: V = values) => {
+    const subs = subDefs(id, v)
+    return (subs.find((s) => owns(s, path)) ?? subs[0])?.id
+  }
+
+  const countIssues = (v: V) => {
+    const bySection = byId(allIds, 0)
+    const bySub: Record<string, number> = {}
     const result = schema.safeParse(v)
     for (const issue of result.success ? [] : result.error.issues) {
       const id = sectionOfKey.get(String(issue.path[0]))
-      if (id) issues[id]!++
+      if (!id) continue
+      bySection[id]!++
+      const sub = subForPath(id, issue.path.join('.'), v)
+      if (sub) bySub[subKey(id, sub)] = (bySub[subKey(id, sub)] ?? 0) + 1
     }
-    return issues
+    return { bySection, bySub }
   }
   // Полная проверка схемой на каждое изменение — доли миллисекунды для сотни полей.
   const issues = countIssues(values)
-  const section = (id: string) => sections.find((s) => s.id === id)!
+
   const get = (id: string): SectionState => {
     const s = section(id)
-    return { id, title: s.title, step: s.step, issues: issues[id]!, visited: visited[id]!, confirmed: confirmed[id]!, summary: s.summary(values) }
+    return {
+      id,
+      title: s.title,
+      step: s.step,
+      issues: issues.bySection[id]!,
+      visited: visited[id]!,
+      confirmed: confirmed[id]!,
+      summary: s.summary(values),
+    }
   }
   const list = allIds.map(get)
-  const index = steps.indexOf(current)
 
-  const go = (id: string) => {
-    if (id === current) return
-    if (current !== REVIEW) {
+  const subOf = (id: string) => {
+    if (id === REVIEW) return undefined
+    const subs = subDefs(id)
+    // Запомненный подэтап мог исчезнуть — например, удалён акт.
+    return subs.some((s) => s.id === openSub[id]) ? openSub[id] : subs[0]?.id
+  }
+
+  const subSteps = (id: string): SubStepState[] => {
+    const open = subOf(id)
+    return subDefs(id).map((s) => ({
+      id: s.id,
+      title: s.title,
+      help: s.help,
+      issues: issues.bySub[subKey(id, s.id)] ?? 0,
+      visited: !!visitedSubs[subKey(id, s.id)] || confirmed[id]!,
+      current: s.id === open,
+    }))
+  }
+
+  /** Покинутый подэтап проверяется — ошибки видны в его полях. */
+  const leaveSub = (id: string, sub: string | undefined) => {
+    if (id === REVIEW || !sub) return
+    const def = subDefs(id).find((s) => s.id === sub)
+    setVisitedSubs((m) => ({ ...m, [subKey(id, sub)]: true }))
+    if (def) void trigger([...def.fields, ...(def.exact ?? [])])
+  }
+
+  const go = (id: string, sub?: string) => {
+    const from = subOf(current)
+    const to = sub ?? subOf(id)
+    if (id === current && (id === REVIEW || to === from)) return
+    leaveSub(current, from)
+    if (id !== current && current !== REVIEW) {
       setVisited((m) => ({ ...m, [current]: true }))
       // Показать ошибки покинутого раздела в его полях — к ним вернутся по индикатору.
       void trigger([...section(current).keys])
     }
+    if (to && id !== REVIEW) setOpenSub((m) => ({ ...m, [id]: to }))
+    setWithinSection(id === current)
     setCurrent(id)
     setNavigation((n) => n + 1)
   }
+
+  const index = steps.indexOf(current)
+  const subs = current === REVIEW ? [] : subDefs(current)
+  const subIndex = subs.findIndex((s) => s.id === subOf(current))
+
+  const prev = ((): Target | undefined => {
+    if (subIndex > 0) return { section: current, sub: subs[subIndex - 1]!.id, label: subs[subIndex - 1]!.title }
+    const id = steps[index - 1]
+    return id ? { section: id, sub: subDefs(id).at(-1)?.id, label: section(id).step } : undefined
+  })()
+  const next = ((): Target | undefined => {
+    if (subIndex >= 0 && subIndex < subs.length - 1) return { section: current, sub: subs[subIndex + 1]!.id, label: subs[subIndex + 1]!.title }
+    const id = steps[index + 1]
+    if (!id) return undefined
+    return id === REVIEW ? { section: id, sub: undefined, label: 'Verificare' } : { section: id, sub: subDefs(id)[0]?.id, label: section(id).step }
+  })()
 
   const api: SectionsApi = {
     list,
     get,
     current,
-    prev: steps[index - 1],
-    next: steps[index + 1],
+    subSteps,
+    subOf,
+    prev,
+    next,
     go,
+    goSub: (sub) => go(current, sub),
     advance: () => {
-      const next = steps[index + 1]
       if (!next) return
-      if (current !== REVIEW) setConfirmed((m) => ({ ...m, [current]: true }))
-      go(next)
+      if (next.section !== current && current !== REVIEW) setConfirmed((m) => ({ ...m, [current]: true }))
+      go(next.section, next.sub)
     },
+    retreat: () => prev && go(prev.section, prev.sub),
     confirmed: allIds.filter((id) => confirmed[id]),
     navigation,
-    openForKeys: (keys) => {
-      const ids = new Set(keys.map((k) => sectionOfKey.get(k)))
+    withinSection,
+    openForPaths: (paths) => {
+      const ids = new Set(paths.map((p) => sectionOfKey.get(p.split('.')[0]!)))
       const first = allIds.find((id) => ids.has(id))
       setVisited((m) => ({ ...m, ...byId([...ids].filter((id): id is string => !!id), true) }))
-      if (first) setCurrent(first)
+      const touched: Record<string, boolean> = {}
+      for (const p of paths) {
+        const id = sectionOfKey.get(p.split('.')[0]!)
+        const sub = id && subForPath(id, p)
+        if (sub) touched[subKey(id, sub)] = true
+      }
+      setVisitedSubs((m) => ({ ...m, ...touched }))
+      if (!first) return
+      const sub = subDefs(first).find((s) => paths.some((p) => owns(s, p))) ?? subDefs(first)[0]
+      if (sub) setOpenSub((m) => ({ ...m, [first]: sub.id }))
+      setWithinSection(false)
+      setCurrent(first)
     },
     resume: (loaded, ids) => {
-      const loadedIssues = countIssues(loaded)
+      const v = loaded as V
+      const loadedIssues = countIssues(v)
       const restored = { ...byId(allIds, false), ...byId(ids.filter((id) => allIds.includes(id)), true) }
-      setCurrent(allIds.find((id) => loadedIssues[id]! > 0 || !restored[id]) ?? REVIEW)
+      const open = allIds.find((id) => loadedIssues.bySection[id]! > 0 || !restored[id]) ?? REVIEW
+      if (open !== REVIEW) {
+        // В пройденном разделе — сразу подэтап с ошибками, в остальных — первый.
+        const subs = subDefs(open, v)
+        const withIssues = restored[open] ? subs.find((s) => (loadedIssues.bySub[subKey(open, s.id)] ?? 0) > 0) : undefined
+        const sub = withIssues ?? subs[0]
+        if (sub) setOpenSub((m) => ({ ...m, [open]: sub.id }))
+      }
+      setCurrent(open)
       // Подтверждённый раздел пользователь уже покидал — его ошибки видны сразу.
       setVisited(restored)
       setConfirmed(restored)
     },
+    helpTopic: current === REVIEW ? 'review' : (subs[subIndex]?.help ?? 'welcome'),
     done: list.filter((s) => statusOf(s) === 'done').length,
     total: allIds.length,
   }
@@ -163,6 +306,9 @@ export type Status = 'done' | 'error' | 'todo'
 
 export const statusOf = ({ issues, visited, confirmed }: SectionState): Status =>
   issues > 0 ? (visited ? 'error' : 'todo') : confirmed ? 'done' : 'todo'
+
+/** Подэтап готов, как только с него ушли без ошибок: подтверждать отдельно не нужно. */
+const subStatusOf = ({ issues, visited }: SubStepState): Status => (issues > 0 ? (visited ? 'error' : 'todo') : visited ? 'done' : 'todo')
 
 export const issuesText = (issues: number) => (issues === 1 ? '1 câmp de corectat' : `${issues} câmpuri de corectat`)
 
@@ -193,14 +339,15 @@ export function StatusTag({ section }: { section: SectionState }) {
  * Экран шага. Неоткрытые шаги скрыты атрибутом hidden, а не убраны из дерева:
  * поля остаются зарегистрированными, а при ошибке поле можно сразу сфокусировать.
  */
-export function StepPanel({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  const { current, navigation } = useSections()
+export function StepPanel({ id, title, intro, children }: { id: string; title: string; intro?: ReactNode; children: ReactNode }) {
+  const { current, navigation, withinSection } = useSections()
   const heading = useRef<HTMLHeadingElement>(null)
   const open = current === id
 
   // После перехода по шагам — фокус на заголовок: экранный диктор прочитает, куда попали.
+  // Внутри раздела фокус получает заголовок подэтапа (SubStep).
   useEffect(() => {
-    if (open && navigation > 0) heading.current?.focus()
+    if (open && navigation > 0 && !withinSection) heading.current?.focus()
   }, [navigation]) // только при переходе, не при открытии шага с ошибкой
 
   return (
@@ -208,16 +355,82 @@ export function StepPanel({ id, title, children }: { id: string; title: string; 
       <h2 id={`step-${id}-title`} className="step-title" ref={heading} tabIndex={-1}>
         {title}
       </h2>
+      {intro}
       {children}
     </section>
   )
 }
 
+/** Раздел, внутри которого лежит SubStep. */
+const SectionIdContext = createContext('')
+
 export function Section({ id, children }: { id: string; children: ReactNode }) {
   const { title } = useSections().get(id)
   return (
-    <StepPanel id={id} title={title}>
+    <SectionIdContext.Provider value={id}>
+      <StepPanel id={id} title={title} intro={<SubStepsBar section={id} />}>
+        {children}
+      </StepPanel>
+    </SectionIdContext.Provider>
+  )
+}
+
+const SUB_STATUS_TEXT: Record<Status, string> = { done: 'gata', error: 'conține erori', todo: 'de completat' }
+
+/** Полоска подэтапов под заголовком раздела: сегмент на подэтап, по клику — переход. */
+function SubStepsBar({ section }: { section: string }) {
+  const sections = useSections()
+  const subs = sections.subSteps(section)
+  if (subs.length < 2) return null
+  const index = subs.findIndex((s) => s.current)
+  return (
+    <nav className="substeps" aria-label="Subetapele secțiunii">
+      <p className="substeps-count">
+        Subetapa {index + 1} din {subs.length}
+      </p>
+      <ol className="substeps-bar">
+        {subs.map((s, i) => {
+          const status = subStatusOf(s)
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                className={`substeps-segment substeps-segment--${status}${s.current ? ' substeps-segment--current' : ''}`}
+                aria-label={`${i + 1}. ${s.title}: ${SUB_STATUS_TEXT[status]}`}
+                aria-current={s.current ? 'step' : undefined}
+                title={s.title}
+                onClick={() => sections.goSub(s.id)}
+              />
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
+}
+
+/** Экран подэтапа внутри Section: заголовок (если подэтапов несколько), короткая подсказка, поля. */
+export function SubStep({ id, children }: { id: string; children: ReactNode }) {
+  const section = useContext(SectionIdContext)
+  const sections = useSections()
+  const heading = useRef<HTMLHeadingElement>(null)
+  const subs = sections.subSteps(section)
+  const sub = subs.find((s) => s.id === id)
+  const open = sections.current === section && sections.subOf(section) === id
+
+  useEffect(() => {
+    if (open && sections.navigation > 0 && sections.withinSection) heading.current?.focus()
+  }, [sections.navigation])
+
+  return (
+    <div className="substep" hidden={!open}>
+      {subs.length > 1 && sub && (
+        <h3 className="substep-title" ref={heading} tabIndex={-1}>
+          {sub.title}
+        </h3>
+      )}
+      {sub && <InlineTip topic={sub.help} />}
       {children}
-    </StepPanel>
+    </div>
   )
 }

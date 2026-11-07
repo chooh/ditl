@@ -1,4 +1,5 @@
-import { join, type SectionDef } from '../form/sections'
+import { join, type SectionDef, type SubStepDef } from '../form/sections'
+import type { HelpTopic } from '../help/content'
 import { formatDate } from '../pdf/format'
 import { fullName, unitAddress, type DossierInput } from './schema'
 
@@ -8,6 +9,26 @@ const attachmentCount = (list: { name: string }[]) => list.filter((a) => a.name.
 
 const ROLE = { representative: 'reprezentant legal', proxy: 'împuternicit' } as Record<string, string>
 
+/** Подэтап акта. */
+export const deedStep = (i: number) => `deed-${i}`
+
+/** Части объекта — по подэтапу на каждую. */
+const PROPERTY_PARTS = [
+  { part: 'address', title: 'actul și adresa', fields: ['deedId', 'address'], help: 'property.address' },
+  { part: 'building', title: 'clădirea', fields: ['building.type', 'building.purchaseValue'], help: 'property.building' },
+  { part: 'values', title: 'valoarea clădirii', fields: ['building.values'], help: 'property.values' },
+  { part: 'land', title: 'terenul', fields: ['land'], help: 'property.land' },
+  { part: 'annex', title: 'documente anexate', fields: ['attachments'], help: 'property.annex' },
+] as const satisfies readonly { part: string; title: string; fields: readonly string[]; help: HelpTopic }[]
+
+export type PropertyPart = (typeof PROPERTY_PARTS)[number]['part']
+
+/** Подэтап части объекта. */
+export const propertyStep = (i: number, part: PropertyPart) => `property-${i}-${part}`
+
+/** Раздел из одного подэтапа. */
+const single = (id: string, title: string, fields: readonly string[], help: HelpTopic): (() => SubStepDef[]) => () => [{ id, title, fields, help }]
+
 export const SECTIONS: readonly SectionDef<DossierInput>[] = [
   {
     id: 'company',
@@ -15,6 +36,23 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Contribuabil',
     keys: ['company'],
     summary: ({ company: c }) => join(c.name, c.uniqueId && `CUI ${c.uniqueId}`, c.seat.locality),
+    subSteps: () => [
+      {
+        id: 'identity',
+        title: 'Date de identificare',
+        fields: ['company.name', 'company.taxId', 'company.uniqueId', 'company.tradeRegister'],
+        help: 'company.identity',
+      },
+      {
+        id: 'contact',
+        title: 'Contact și comunicare',
+        fields: ['company.phone', 'company.fax', 'company.email', 'company.emailOnly'],
+        help: 'company.contact',
+      },
+      { id: 'bank', title: 'Contul bancar', fields: ['company.bank'], help: 'company.bank' },
+      { id: 'seat', title: 'Sediul', fields: ['company.seat'], help: 'company.seat' },
+      { id: 'other', title: 'Alte adrese (dacă este cazul)', fields: ['company.correspondence', 'company.foreignResidence'], help: 'company.other' },
+    ],
   },
   {
     id: 'signatory',
@@ -22,6 +60,16 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Semnatar',
     keys: ['signatory'],
     summary: ({ signatory: s }) => join(fullName(s), ROLE[s.role], `${s.idDocument.type} ${s.idDocument.series} ${s.idDocument.number}`.trim()),
+    subSteps: () => [
+      {
+        id: 'person',
+        title: 'Calitatea și datele personale',
+        fields: ['signatory.role', 'signatory.lastName', 'signatory.firstName', 'signatory.personalId', 'signatory.phone', 'signatory.email'],
+        help: 'signatory.person',
+      },
+      { id: 'id', title: 'Actul de identitate', fields: ['signatory.idDocument'], help: 'signatory.id' },
+      { id: 'address', title: 'Domiciliul', fields: ['signatory.address'], help: 'signatory.address' },
+    ],
   },
   {
     id: 'deeds',
@@ -29,6 +77,11 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Acte',
     keys: ['deeds'],
     summary: ({ deeds }) => join(count(deeds.length, 'act', 'acte'), ...deeds.map((d) => d.number && `nr. ${d.number}${d.date ? ` din ${formatDate(d.date)}` : ''}`)),
+    // По подэтапу на акт и список актов; ошибка «нет ни одного акта» — у списка.
+    subSteps: ({ deeds }) => [
+      ...deeds.map((_, i) => ({ id: deedStep(i), title: `Actul ${i + 1}`, fields: [`deeds.${i}`], help: 'deed' as const })),
+      { id: 'deeds-list', title: 'Lista actelor', fields: [], exact: ['deeds'], help: 'deeds.list' },
+    ],
   },
   {
     id: 'properties',
@@ -36,6 +89,17 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Imobile',
     keys: ['properties'],
     summary: ({ properties }) => join(count(properties.length, 'imobil', 'imobile'), ...properties.map(unitAddress)),
+    subSteps: ({ properties }) => [
+      ...properties.flatMap((_, i) =>
+        PROPERTY_PARTS.map(({ part, title, fields, help }) => ({
+          id: propertyStep(i, part),
+          title: `Imobilul ${i + 1} — ${title}`,
+          fields: fields.map((f) => `properties.${i}.${f}`),
+          help,
+        })),
+      ),
+      { id: 'properties-list', title: 'Lista imobilelor', fields: [], exact: ['properties'], help: 'properties.list' },
+    ],
   },
   {
     id: 'exemption',
@@ -43,6 +107,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Scutiri',
     keys: ['exemption'],
     summary: ({ exemption: e }) => (e.share || e.capacity ? join(e.share && `în cotă de ${e.share}`, e.capacity) : 'Nu este cazul'),
+    subSteps: single('exemption', 'Scutiri', ['exemption'], 'exemption'),
   },
   {
     id: 'attachments',
@@ -53,6 +118,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
       const n = attachmentCount(attachments)
       return n === 0 ? 'Niciun document' : count(n, 'document', 'documente')
     },
+    subSteps: single('attachments', 'Anexe comune', ['attachments'], 'attachments'),
   },
   {
     id: 'signatures',
@@ -60,6 +126,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     step: 'Semnături',
     keys: ['declarationDate', 'director', 'chiefAccountant'],
     summary: (v) => join(formatDate(v.declarationDate), v.director || fullName(v.signatory), v.chiefAccountant),
+    subSteps: single('signatures', 'Data și semnături', ['declarationDate', 'director', 'chiefAccountant'], 'signatures'),
   },
 ]
 

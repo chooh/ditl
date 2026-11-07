@@ -30,7 +30,7 @@ export default function PdfView({ source, filename }: { source: string; filename
         setState(
           e instanceof TypstError
             ? { step: 'error', message: 'Șablonul nu a putut fi compilat.', details: e.message }
-            : { step: 'error', message: 'Compilatorul nu a putut fi încărcat. Verificați conexiunea și încercați din nou.' },
+            : { step: 'error', message: 'Motorul de tipărire nu a putut fi încărcat. Verificați conexiunea și încercați din nou.' },
         )
       },
     )
@@ -41,7 +41,7 @@ export default function PdfView({ source, filename }: { source: string; filename
   }, [source, attempt])
 
   if (state.step === 'compiling') {
-    return <InlineLoading status="active" description="Se încarcă compilatorul și se generează PDF-ul…" />
+    return <InlineLoading status="active" description="Se pregătește motorul de tipărire și se generează PDF-ul…" />
   }
 
   if (state.step === 'error') {

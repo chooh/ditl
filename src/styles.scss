@@ -21,6 +21,7 @@
 @use '@carbon/styles/scss/spacing' as *;
 @use '@carbon/styles/scss/type';
 @use '@carbon/styles/scss/breakpoint';
+@use '@carbon/styles/scss/motion';
 @use '@carbon/styles/scss/components/accordion';
 @use '@carbon/styles/scss/components/button';
 @use '@carbon/styles/scss/components/code-snippet';
@@ -28,13 +29,18 @@
 @use '@carbon/styles/scss/components/form';
 @use '@carbon/styles/scss/components/inline-loading';
 @use '@carbon/styles/scss/components/link';
+@use '@carbon/styles/scss/components/loading';
+@use '@carbon/styles/scss/components/modal';
 @use '@carbon/styles/scss/components/notification';
+@use '@carbon/styles/scss/components/popover';
+@use '@carbon/styles/scss/components/progress-bar';
 @use '@carbon/styles/scss/components/progress-indicator';
 @use '@carbon/styles/scss/components/radio-button';
 @use '@carbon/styles/scss/components/select';
 @use '@carbon/styles/scss/components/stack';
 @use '@carbon/styles/scss/components/tag';
 @use '@carbon/styles/scss/components/text-input';
+@use '@carbon/styles/scss/components/toggletip';
 @use '@carbon/styles/scss/components/ui-shell';
 
 // Reset Carbon задаёт display: block секциям — без этого атрибут hidden
@@ -63,15 +69,15 @@ body {
 
 // ── Каркас страницы ──
 // Страница — сам Grid, без Content UI Shell: тот добавлял padding 2rem поверх полей
-// сетки. Боковые поля задаёт сетка, а отступ под фиксированную шапку (3rem) — мы.
+// сетки. Боковые поля задаёт сетка, а отступ под фиксированную шапку (3rem и вырез экрана) — мы.
 .page {
-  margin-block-start: 3rem;
+  margin-block-start: calc(3rem + env(safe-area-inset-top, 0px));
   padding-block: $spacing-07 $spacing-10;
 }
 
 .page-title {
   @include type.type-style('fluid-heading-05', true);
-  margin-block-end: $spacing-05;
+  margin-block-end: $spacing-03;
 }
 
 .lead {
@@ -88,6 +94,19 @@ body {
 
 .hint {
   margin-block-end: $spacing-05;
+}
+
+// На телефоне форма — сразу под заголовком: вводный текст и примечание о данных
+// уже были на приветствии, а черновики уходят под мастер.
+@include breakpoint.breakpoint-down(md) {
+  .editor-lead,
+  .privacy-note {
+    display: none;
+  }
+
+  .drafts {
+    order: 1;
+  }
 }
 
 .page-footer {
@@ -128,6 +147,15 @@ body {
 
   @include breakpoint.breakpoint(lg) {
     grid-template-columns: 13rem minmax(0, 1fr);
+  }
+
+  // Третья колонка — подсказки; свёрнутая панель — узкая полоска с кнопкой.
+  @include breakpoint.breakpoint(xlg) {
+    grid-template-columns: 13rem minmax(0, 1fr) 20rem;
+
+    &:has(.help-aside--collapsed) {
+      grid-template-columns: 13rem minmax(0, 1fr) 3rem;
+    }
   }
 }
 
@@ -171,6 +199,94 @@ body {
   }
 }
 
+// Заголовок, получивший фокус, не прячется под фиксированной шапкой.
+.step-title,
+.substep-title,
+.preview-heading {
+  scroll-margin-block-start: calc(3rem + #{$spacing-07});
+}
+
+.wizard-progress {
+  margin-block-end: $spacing-06;
+}
+
+// ── Подэтапы ──
+.substeps {
+  margin-block-end: $spacing-06;
+}
+
+.substeps-count {
+  @include type.type-style('label-01');
+  margin-block-end: $spacing-03;
+  color: theme.$text-secondary;
+}
+
+.substeps-bar {
+  display: flex;
+  gap: $spacing-02;
+
+  > li {
+    flex: 1;
+  }
+}
+
+.substeps-segment {
+  display: block;
+  inline-size: 100%;
+  block-size: $spacing-03;
+  padding: 0;
+  border: 0;
+  background: theme.$border-subtle;
+  cursor: pointer;
+  transition: background 110ms motion.motion(standard, productive);
+
+  &:hover {
+    background: theme.$border-strong;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: 2px;
+  }
+}
+
+.substeps-segment--done {
+  background: theme.$support-success;
+}
+
+.substeps-segment--error {
+  background: theme.$support-error;
+}
+
+.substeps-segment--current {
+  background: theme.$interactive;
+  box-shadow: 0 0 0 1px theme.$interactive;
+}
+
+.substep-title {
+  @include type.type-style('heading-03');
+  margin-block-end: $spacing-05;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.substep:not([hidden]) {
+  animation: substep-in 240ms motion.motion(entrance, productive);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes substep-in {
+  from {
+    opacity: 0;
+    transform: translateY($spacing-03);
+  }
+}
+
 // Fluid ButtonSet встаёт столбиком при 176px на кнопку, а «Continuă: Contribuabil»
 // влезает лишь в ~232px — переносим раньше, пока две кнопки не помещаются по максимуму.
 .wizard-buttons {
@@ -184,6 +300,133 @@ body {
   }
 }
 
+// ── Подсказки ──
+// Короткая подсказка над полями — пока нет боковой панели.
+.inline-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-03;
+  margin-block-end: $spacing-06;
+  padding: $spacing-04 $spacing-05;
+  border-inline-start: 3px solid theme.$support-info;
+  background: theme.$layer-01;
+
+  @include breakpoint.breakpoint(xlg) {
+    display: none;
+  }
+}
+
+.inline-tip-icon {
+  flex: none;
+  margin-block-start: $spacing-01;
+  fill: theme.$support-info;
+}
+
+.inline-tip-text {
+  @include type.type-style('body-compact-01');
+}
+
+.inline-tip-more {
+  @include type.type-style('body-compact-01');
+  padding: 0;
+  border: 0;
+  background: none;
+  color: theme.$link-primary;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+  }
+}
+
+.help-aside {
+  display: none;
+
+  @include breakpoint.breakpoint(xlg) {
+    position: sticky;
+    inset-block-start: calc(3rem + #{$spacing-07});
+    display: block;
+    overflow-y: auto;
+    align-self: start;
+    max-block-size: calc(100vh - 6rem);
+    padding: $spacing-05;
+    border-inline-start: 3px solid theme.$support-info;
+    background: theme.$layer-01;
+  }
+}
+
+.help-aside--collapsed {
+  padding: $spacing-03;
+}
+
+.help-aside-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  margin-block-end: $spacing-04;
+
+  > svg {
+    flex: none;
+    fill: theme.$support-info;
+  }
+
+  .help-aside--collapsed & {
+    flex-direction: column;
+    margin: 0;
+  }
+}
+
+.help-aside-title {
+  @include type.type-style('heading-compact-02');
+  flex: 1;
+}
+
+.help-body {
+  @include type.type-style('body-compact-01');
+
+  .cds--inline-notification {
+    margin-block: $spacing-04;
+  }
+}
+
+.help-lead {
+  margin-block-end: $spacing-04;
+}
+
+.help-subtitle {
+  @include type.type-style('heading-compact-01');
+  margin-block: $spacing-05 $spacing-03;
+}
+
+.help-list {
+  padding-inline-start: $spacing-05;
+  list-style: disc outside;
+
+  > li + li {
+    margin-block-start: $spacing-03;
+  }
+}
+
+// «i» у подписи поля — поверх правого края строки подписи.
+.field-with-tip {
+  position: relative;
+
+  .cds--label {
+    padding-inline-end: $spacing-06;
+  }
+}
+
+.field-tip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+
+  .cds--toggletip-content p {
+    @include type.type-style('body-compact-01');
+  }
+}
+
 // ── Списки ──
 // Вторая строка элемента ContainedList: имя файла, сводка раздела, время.
 .item-secondary {
@@ -191,6 +434,15 @@ body {
   display: block;
   margin-block-start: $spacing-02;
   color: theme.$text-secondary;
+}
+
+// Списки актов и объектов.
+.items {
+  margin-block-end: $spacing-05;
+}
+
+.item-actions {
+  display: flex;
 }
 
 // ── Проверка ──
@@ -272,7 +524,72 @@ body {
   margin-block-end: $spacing-05;
 }
 
+// ── Генерация ──
+.generating {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-05;
+  background: theme.$overlay;
+  animation: substep-in 110ms linear;
+}
+
+.generating-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-04;
+  max-inline-size: 24rem;
+  padding: $spacing-07;
+  background: theme.$layer-01;
+  text-align: center;
+}
+
+.generating-title {
+  @include type.type-style('heading-03');
+}
+
+.generating-text {
+  @include type.type-style('body-compact-01');
+  color: theme.$text-secondary;
+}
+
 // ── Результат ──
+.result-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-05;
+  padding: $spacing-06;
+  border-inline-start: 3px solid theme.$support-success;
+  background: theme.$layer-01;
+
+  .preview-heading {
+    margin-block-end: $spacing-03;
+  }
+}
+
+.result-hero-icon {
+  flex: none;
+  fill: theme.$support-success;
+}
+
+.next-steps {
+  @include type.type-style('body-01');
+  padding-inline-start: $spacing-06;
+  list-style: decimal;
+
+  > li + li {
+    margin-block-start: $spacing-03;
+  }
+}
+
+.advanced {
+  margin-block-start: $spacing-05;
+}
+
 .preview-heading {
   @include type.type-style('heading-04');
   margin-block-end: $spacing-05;
@@ -298,6 +615,121 @@ body {
   background: theme.$layer-01;
 }
 
+// ── Приветствие ──
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-09;
+}
+
+.welcome-hero {
+  max-inline-size: 48rem;
+}
+
+.welcome-eyebrow {
+  @include type.type-style('label-02');
+  margin-block-end: $spacing-03;
+  color: theme.$text-secondary;
+}
+
+.welcome-title {
+  @include type.type-style('fluid-display-01', true);
+  margin-block-end: $spacing-05;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  margin-block: $spacing-07 $spacing-05;
+}
+
+.welcome-meta {
+  @include type.type-style('helper-text-01');
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  color: theme.$text-secondary;
+}
+
+.welcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: $spacing-05;
+}
+
+.welcome-step {
+  display: flex;
+  gap: $spacing-04;
+  padding: $spacing-05;
+  background: theme.$layer-01;
+}
+
+.welcome-step-number {
+  @include type.type-style('heading-03');
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 50%;
+  background: theme.$interactive;
+  color: theme.$text-on-color;
+}
+
+.welcome-step-title {
+  @include type.type-style('heading-compact-02');
+  display: block;
+  margin-block-end: $spacing-02;
+}
+
+.welcome-step-text {
+  @include type.type-style('body-compact-01');
+  display: block;
+  color: theme.$text-secondary;
+}
+
+.welcome-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: $spacing-05;
+}
+
+.welcome-card {
+  @include type.type-style('body-01');
+  padding: $spacing-06;
+  border: 1px solid theme.$border-subtle;
+
+  p {
+    margin-block-end: $spacing-04;
+  }
+}
+
+.welcome-card-title {
+  @include type.type-style('heading-03');
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  margin-block-end: $spacing-05;
+}
+
+.welcome-checklist > li {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-03;
+
+  + li {
+    margin-block-start: $spacing-04;
+  }
+
+  > svg {
+    flex: none;
+    margin-block-start: 0.2rem;
+    fill: theme.$support-success;
+  }
+}
+
 .drafts > .hint {
   margin-block-end: $spacing-03;
 }
@@ -306,4 +738,16 @@ body {
 // длинные заголовки и кнопки раздвигали страницу шире экрана.
 .cds--stack-vertical {
   grid-template-columns: minmax(0, 1fr);
+}
+
+// ── Вырезы экрана (viewport-fit=cover в index.html) ──
+body {
+  padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
+  padding-block-end: env(safe-area-inset-bottom, 0);
+}
+
+.cds--header {
+  block-size: calc(3rem + env(safe-area-inset-top, 0px));
+  padding-block-start: env(safe-area-inset-top, 0px);
+  padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
 }
