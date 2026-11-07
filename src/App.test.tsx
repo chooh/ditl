@@ -265,6 +265,26 @@ describe('приветствие', () => {
     expect(currentStep()).toBe('Verificarea dosarului')
     expect(screen.getByText(/Secțiuni gata: 7 din 7/)).toBeTruthy()
   })
+  it('название в шапке снова открывает приветствие, форма остаётся как была', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Începe completarea' }))
+    await goTo(user, 'Semnatar')
+    await user.type(input('Numele'), 'Popescu')
+    await user.click(screen.getByRole('link', { name: /Declarații fiscale/ }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Declarațiile ITL 002 și ITL 004, pas cu pas' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Ajutor' }))
+    expect(within(document.getElementById('help-panel')!).getByRole('heading', { name: 'Cum funcționează' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Închide ajutorul' }))
+
+    await user.click(screen.getByRole('button', { name: 'Continuă completarea' }))
+    expect(currentStep()).toBe('Semnatarul declarațiilor')
+    expect(input('Numele').value).toBe('Popescu')
+    // Советы — снова к открытому разделу.
+    await user.click(screen.getByRole('button', { name: 'Ajutor' }))
+    expect(within(document.getElementById('help-panel')!).getByRole('heading', { name: 'Cine semnează declarațiile' })).toBeTruthy()
+  })
 })
 
 describe('акты и объекты', () => {

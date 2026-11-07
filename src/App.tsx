@@ -1,7 +1,7 @@
 import { Button, Column, Grid, Header, HeaderGlobalBar, HeaderName, InlineNotification, Link, Loading, SkipToContent, Stack } from '@carbon/react'
 import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { FormProvider, useForm, useFormContext, type FieldErrors } from 'react-hook-form'
 import { documentsFor } from './documents'
@@ -42,18 +42,26 @@ export function App() {
     if (next) switchTo(next)
     window.scrollTo(0, 0)
   }
+  const showWelcome = () => {
+    setWelcome(true)
+    window.scrollTo(0, 0)
+  }
 
   return (
     <HelpProvider>
-      <AppHeader />
+      <AppHeader onHome={showWelcome} />
       <Grid as="main" id="main-content" className="page">
         <Column sm={4} md={8} lg={16}>
-          {welcome ? (
+          {welcome && (
             // Пример — отдельным черновиком, все разделы подтверждены.
-            <Welcome onStart={() => start()} onSample={() => start({ initial: sampleDossier(), confirmed: SECTIONS.map((s) => s.id) })} />
-          ) : (
-            <Editor key={session.key} session={session} onSwitch={switchTo} />
+            <Welcome
+              returning={isOnboarded()}
+              onStart={() => start()}
+              onSample={() => start({ initial: sampleDossier(), confirmed: SECTIONS.map((s) => s.id) })}
+            />
           )}
+          {/* Под приветствием форма скрыта, а не размонтирована — открытый раздел и ввод сохраняются. */}
+          <Editor key={session.key} session={session} onSwitch={switchTo} onAbout={showWelcome} hidden={welcome} />
           <Footer />
         </Column>
       </Grid>
@@ -61,11 +69,19 @@ export function App() {
   )
 }
 
-function AppHeader() {
+/** Название в шапке открывает приветствие: что это за приложение и что подготовить. */
+function AppHeader({ onHome }: { onHome: () => void }) {
   return (
     <Header aria-label="Declarații fiscale ITL">
       <SkipToContent />
-      <HeaderName href="./" prefix="DITL">
+      <HeaderName
+        href="./"
+        prefix="DITL"
+        onClick={(e: MouseEvent) => {
+          e.preventDefault()
+          onHome()
+        }}
+      >
         Declarații fiscale
       </HeaderName>
       <HeaderGlobalBar>
@@ -97,7 +113,7 @@ function Footer() {
 
 type EditorProps = { session: Session; onSwitch: (next: Session) => void }
 
-function Editor({ session, onSwitch }: EditorProps) {
+function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout: () => void; hidden: boolean }) {
   const form = useForm<DossierInput, unknown, Dossier>({
     resolver: zodResolver(dossierSchema),
     defaultValues: session.draft?.values ?? session.initial ?? emptyDossier(),
@@ -129,13 +145,16 @@ function Editor({ session, onSwitch }: EditorProps) {
   }
 
   return (
-    <Stack gap={7}>
+    <Stack gap={7} hidden={hidden}>
       {!docs && (
         <div>
           <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
           <p className="lead editor-lead">
             Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil și o
-            declarație ITL 004 pentru terenul aferent tuturor imobilelor.
+            declarație ITL 004 pentru terenul aferent tuturor imobilelor.{' '}
+            <Link href="./" inline onClick={(e: MouseEvent) => (e.preventDefault(), onAbout())}>
+              Cum funcționează și ce trebuie pregătit
+            </Link>
           </p>
         </div>
       )}
@@ -157,7 +176,7 @@ function Editor({ session, onSwitch }: EditorProps) {
           <DossierForm
             session={session}
             onSwitch={onSwitch}
-            hidden={!!docs}
+            hidden={hidden || !!docs}
             onValid={onValid}
             onInvalid={() => setSubmitFailed(true)}
             error={error}

@@ -9,7 +9,8 @@ import { HELP, type Help, type HelpTopic } from './content'
  */
 type HelpApi = {
   topic: HelpTopic | undefined
-  setTopic(topic: HelpTopic): void
+  /** Тема экрана — до вызова возвращённой функции. */
+  register(topic: HelpTopic): () => void
   /** Тема открытой панели; undefined — панель закрыта. */
   shown: HelpTopic | undefined
   /** Открыть панель: по умолчанию — советы к открытому экрану. */
@@ -25,18 +26,23 @@ export const useHelp = () => useContext(HelpContext)
 /** Тема экрана, пока он открыт. */
 export function useHelpTopic(topic: HelpTopic | undefined) {
   const help = useHelp()
-  useEffect(() => {
-    if (topic) help?.setTopic(topic)
-  }, [topic])
+  useEffect(() => (topic ? help?.register(topic) : undefined), [topic])
 }
 
 export function HelpProvider({ children }: { children: ReactNode }) {
-  const [topic, setTopic] = useState<HelpTopic>()
+  // Действует тема последнего открытого экрана; закрылся он (приветствие поверх
+  // формы) — снова тема того, что под ним.
+  const [topics, setTopics] = useState<{ topic: HelpTopic }[]>([])
+  const topic = topics.at(-1)?.topic
   const [shown, setShown] = useState<HelpTopic>()
   const open = (t?: HelpTopic) => setShown(t ?? topic ?? 'welcome')
   const api: HelpApi = {
     topic,
-    setTopic,
+    register: (topic) => {
+      const entry = { topic }
+      setTopics((list) => [...list, entry])
+      return () => setTopics((list) => list.filter((e) => e !== entry))
+    },
     shown,
     open,
     toggle: () => (shown ? setShown(undefined) : open()),
