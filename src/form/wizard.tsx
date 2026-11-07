@@ -1,20 +1,11 @@
 import { Button, ButtonSet, ContainedList, ContainedListItem, ProgressBar, ProgressIndicator, ProgressStep, Select, SelectItem } from '@carbon/react'
 import { ArrowLeft, ArrowRight, Edit } from '@carbon/icons-react'
 import { useId, type ReactNode } from 'react'
-import { issuesText, REVIEW, StatusTag, StepPanel, statusOf, useSections, type SectionState } from './sections'
+import { issuesText, REVIEW, StatusTag, StepPanel, statusOf, translateStep, useSections, type SectionState } from './sections'
 
 const REVIEW_STEP = 'Verificare'
 
 const STATUS_TEXT = { done: 'gata', todo: 'de completat' }
-
-/** Озвучиваемые состояния шага — вместо английских по умолчанию у Carbon. */
-const STEP_MESSAGES: Record<string, string> = {
-  'carbon.progress-step.complete': 'Gata',
-  'carbon.progress-step.incomplete': 'De completat',
-  'carbon.progress-step.current': 'Pasul curent',
-  'carbon.progress-step.invalid': 'Conține erori',
-}
-const translateStep = (id: string) => STEP_MESSAGES[id] ?? id
 
 const statusText = (s: SectionState) => {
   const status = statusOf(s)

@@ -1,5 +1,5 @@
-import { Button } from '@carbon/react'
-import { ArrowRight, Checkmark, Locked, Notebook, Time } from '@carbon/icons-react'
+import { Button, ListItem, Tile, UnorderedList } from '@carbon/react'
+import { ArrowRight, Notebook } from '@carbon/icons-react'
 import { useHelpTopic } from '../help/Help'
 
 /** Приветствие видели — при следующих открытиях сразу форма. */
@@ -57,43 +57,33 @@ export function Welcome({ onStart, onSample }: { onStart: () => void; onSample: 
             Vezi un exemplu completat
           </Button>
         </div>
-        <p className="welcome-meta">
-          <Time size={16} aria-hidden /> Durează 15–20 de minute. Progresul se salvează automat.
-        </p>
+        <p className="hint">Durează 15–20 de minute. Progresul se salvează automat.</p>
       </div>
 
-      <ol className="welcome-steps">
+      <div className="welcome-tiles">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="welcome-step">
-            <span className="welcome-step-number" aria-hidden>
-              {i + 1}
-            </span>
-            <span>
-              <span className="welcome-step-title">{s.title}</span>
-              <span className="welcome-step-text">{s.text}</span>
-            </span>
-          </li>
+          <Tile key={s.title}>
+            <h2 className="welcome-tile-title">
+              {i + 1}. {s.title}
+            </h2>
+            <p className="hint">{s.text}</p>
+          </Tile>
         ))}
-      </ol>
+      </div>
 
-      <div className="welcome-columns">
-        <div className="welcome-card">
-          <h2 className="welcome-card-title">Pregătiți</h2>
-          <ul className="welcome-checklist">
+      <div className="welcome-tiles">
+        <Tile>
+          <h2 className="welcome-tile-title">Pregătiți</h2>
+          <UnorderedList>
             {CHECKLIST.map((item) => (
-              <li key={item}>
-                <Checkmark size={16} aria-hidden />
-                {item}
-              </li>
+              <ListItem key={item}>{item}</ListItem>
             ))}
-          </ul>
-        </div>
-        <div className="welcome-card">
-          <h2 className="welcome-card-title">
-            <Locked size={20} aria-hidden /> Datele rămân la dumneavoastră
-          </h2>
+          </UnorderedList>
+        </Tile>
+        <Tile>
+          <h2 className="welcome-tile-title">Datele rămân la dumneavoastră</h2>
           <p>Nimic nu este trimis pe internet: documentele se generează direct în acest browser, iar ciornele se păstrează doar aici.</p>
-        </div>
+        </Tile>
       </div>
     </section>
   )

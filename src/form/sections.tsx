@@ -1,4 +1,4 @@
-import { Tag } from '@carbon/react'
+import { ProgressBar, ProgressIndicator, ProgressStep, Tag } from '@carbon/react'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import type { ZodType } from 'zod'
@@ -29,6 +29,13 @@ export type SectionDef<V> = {
 export type SubStepDef = {
   id: string
   title: string
+  /** Короткое имя в индикаторе подэтапов; по умолчанию — title. */
+  step?: string
+  /**
+   * Подэтапы одной группы (части одного объекта) показываются в индикаторе вместе;
+   * подэтапы без группы видны рядом с любой группой (например, список объектов).
+   */
+  group?: string
   /** Пути полей подэтапа: ему принадлежат и все вложенные. */
   fields: readonly string[]
   /** Пути, которые принадлежат подэтапу без вложенных (ошибка «нет ни одного акта» — у списка). */
@@ -57,6 +64,8 @@ export type SectionState = {
 export type SubStepState = {
   id: string
   title: string
+  step: string
+  group: string | undefined
   help: HelpTopic
   issues: number
   /** Пользователь уходил с подэтапа (или раздел уже пройден). */
@@ -194,6 +203,8 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
     return subDefs(id).map((s) => ({
       id: s.id,
       title: s.title,
+      step: s.step ?? s.title,
+      group: s.group,
       help: s.help,
       issues: issues.bySub[subKey(id, s.id)] ?? 0,
       visited: !!visitedSubs[subKey(id, s.id)] || confirmed[id]!,
@@ -375,36 +386,58 @@ export function Section({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
+/** Озвучиваемые состояния шага — вместо английских по умолчанию у Carbon. */
+const STEP_MESSAGES: Record<string, string> = {
+  'carbon.progress-step.complete': 'Gata',
+  'carbon.progress-step.incomplete': 'De completat',
+  'carbon.progress-step.current': 'Pasul curent',
+  'carbon.progress-step.invalid': 'Conține erori',
+}
+export const translateStep = (id: string) => STEP_MESSAGES[id] ?? id
+
 const SUB_STATUS_TEXT: Record<Status, string> = { done: 'gata', error: 'conține erori', todo: 'de completat' }
 
-/** Полоска подэтапов под заголовком раздела: сегмент на подэтап, по клику — переход. */
+/**
+ * Подэтапы раздела под его заголовком: на широком экране — горизонтальный Carbon
+ * ProgressIndicator (по клику — переход), на узком — ProgressBar. Показываются подэтапы
+ * группы открытого (частей одного объекта), иначе у трёх объектов было бы 16 шагов.
+ */
 function SubStepsBar({ section }: { section: string }) {
   const sections = useSections()
-  const subs = sections.subSteps(section)
-  if (subs.length < 2) return null
-  const index = subs.findIndex((s) => s.current)
+  const all = sections.subSteps(section)
+  const open = all.find((s) => s.current)
+  const subs = all.filter((s) => s.group === open?.group || (open?.group !== undefined && s.group === undefined))
+  if (!open || subs.length < 2) return null
+  const index = subs.indexOf(open)
   return (
     <nav className="substeps" aria-label="Subetapele secțiunii">
-      <p className="substeps-count">
-        Subetapa {index + 1} din {subs.length}
-      </p>
-      <ol className="substeps-bar">
-        {subs.map((s, i) => {
+      <ProgressIndicator className="substeps-steps" spaceEqually currentIndex={-1} onChange={(i) => sections.goSub(subs[i]!.id)}>
+        {subs.map((s) => {
           const status = subStatusOf(s)
+          // Как в индикаторе шагов (wizard.tsx): aria-* ProgressStep передаёт кнопке.
+          const a11y = { 'aria-label': `${s.step}: ${SUB_STATUS_TEXT[status]}`, 'aria-current': s.current ? 'step' : undefined }
           return (
-            <li key={s.id}>
-              <button
-                type="button"
-                className={`substeps-segment substeps-segment--${status}${s.current ? ' substeps-segment--current' : ''}`}
-                aria-label={`${i + 1}. ${s.title}: ${SUB_STATUS_TEXT[status]}`}
-                aria-current={s.current ? 'step' : undefined}
-                title={s.title}
-                onClick={() => sections.goSub(s.id)}
-              />
-            </li>
+            <ProgressStep
+              {...a11y}
+              key={s.id}
+              label={s.step}
+              description={s.title}
+              current={s.current}
+              complete={status === 'done'}
+              invalid={status === 'error'}
+              translateWithId={translateStep}
+            />
           )
         })}
-      </ol>
+      </ProgressIndicator>
+      <ProgressBar
+        className="substeps-progress"
+        size="small"
+        label={`Subetapa ${index + 1} din ${subs.length}`}
+        helperText={open.step}
+        value={index + 1}
+        max={subs.length}
+      />
     </nav>
   )
 }

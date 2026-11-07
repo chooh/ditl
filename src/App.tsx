@@ -1,18 +1,5 @@
-import {
-  Button,
-  Column,
-  Grid,
-  Header,
-  HeaderGlobalAction,
-  HeaderGlobalBar,
-  HeaderName,
-  InlineNotification,
-  Link,
-  Loading,
-  SkipToContent,
-  Stack,
-} from '@carbon/react'
-import { DocumentExport, Help } from '@carbon/icons-react'
+import { Button, Column, Grid, Header, HeaderGlobalBar, HeaderName, InlineNotification, Link, Loading, SkipToContent, Stack } from '@carbon/react'
+import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -27,7 +14,7 @@ import { listDrafts, loadActiveDraft } from './drafts/storage'
 import { todayIso } from './form/common'
 import { SectionsProvider, useSections } from './form/sections'
 import { Review, StepButtons, StepIndicator } from './form/wizard'
-import { HelpAside, HelpProvider, useHelp, useHelpTopic } from './help/Help'
+import { HelpHeaderAction, HelpProvider, useHelpTopic } from './help/Help'
 import { Result, type TypstDocument } from './output/Result'
 import { formatDate } from './pdf/format'
 import { isOnboarded, setOnboarded, Welcome } from './welcome/Welcome'
@@ -75,7 +62,6 @@ export function App() {
 }
 
 function AppHeader() {
-  const help = useHelp()
   return (
     <Header aria-label="Declarații fiscale ITL">
       <SkipToContent />
@@ -83,9 +69,7 @@ function AppHeader() {
         Declarații fiscale
       </HeaderName>
       <HeaderGlobalBar>
-        <HeaderGlobalAction aria-label="Ajutor" tooltipAlignment="end" onClick={() => help?.open()}>
-          <Help size={20} />
-        </HeaderGlobalAction>
+        <HelpHeaderAction />
       </HeaderGlobalBar>
     </Header>
   )
@@ -221,7 +205,8 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
 
   return (
     <form onSubmit={form.handleSubmit(onValid, onInvalid)} noValidate hidden={hidden}>
-      {form.formState.isSubmitting && <Generating />}
+      {/* Поверх формы, пока собираются документы. */}
+      {form.formState.isSubmitting && <Loading description="Se pregătesc documentele" />}
       <Stack gap={6}>
         {debugEnabled && (
           <div className="dev-tools">
@@ -259,22 +244,8 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
               }
             />
           </div>
-          <HelpAside />
         </div>
       </Stack>
     </form>
-  )
-}
-
-/** Поверх формы, пока собираются документы. */
-function Generating() {
-  return (
-    <div className="generating" role="status" aria-live="polite">
-      <div className="generating-card">
-        <Loading withOverlay={false} small={false} description="Se pregătesc documentele" />
-        <p className="generating-title">Se pregătesc documentele…</p>
-        <p className="generating-text">Verificăm datele și completăm declarațiile ITL 002 și ITL 004.</p>
-      </div>
-    </div>
   )
 }

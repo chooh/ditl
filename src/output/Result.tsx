@@ -1,5 +1,19 @@
-import { Accordion, AccordionItem, Button, CodeSnippet, ContainedList, ContainedListItem, InlineLoading, Select, SelectItem, Stack } from '@carbon/react'
-import { ArrowLeft, CheckmarkFilled, DocumentPdf, Download } from '@carbon/icons-react'
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Callout,
+  CodeSnippet,
+  ContainedList,
+  ContainedListItem,
+  InlineLoading,
+  ListItem,
+  OrderedList,
+  Select,
+  SelectItem,
+  Stack,
+} from '@carbon/react'
+import { ArrowLeft, DocumentPdf, Download } from '@carbon/icons-react'
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import { useHelpTopic } from '../help/Help'
 import { downloadBlob } from './download'
@@ -39,24 +53,26 @@ export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => 
   return (
     <section className="preview" aria-labelledby="result-heading">
       <Stack gap={6}>
-        <div className="result-hero">
-          <CheckmarkFilled size={32} aria-hidden className="result-hero-icon" />
-          <div>
-            <h2 id="result-heading" className="preview-heading" ref={heading} tabIndex={-1}>
-              Documentele sunt gata
-            </h2>
-            <p>
-              {docs.length === 1 ? 'S-a pregătit 1 declarație.' : `S-au pregătit ${docs.length} declarații.`} Generați PDF-urile, apoi
-              tipăriți-le, semnați-le și depuneți-le.
-            </p>
-          </div>
+        <div>
+          <h2 id="result-heading" className="preview-heading" ref={heading} tabIndex={-1}>
+            Documentele sunt gata
+          </h2>
+          <Callout
+            kind="success"
+            lowContrast
+            title={docs.length === 1 ? 'S-a pregătit 1 declarație.' : `S-au pregătit ${docs.length} declarații.`}
+            subtitle="Generați PDF-urile, apoi tipăriți-le, semnați-le și depuneți-le."
+          />
         </div>
-        <ol className="next-steps" aria-label="Ce urmează">
-          <li>Generați și descărcați PDF-ul fiecărei declarații.</li>
-          <li>Tipăriți, semnați și ștampilați declarațiile.</li>
-          <li>Atașați copiile documentelor enumerate la anexe.</li>
-          <li>Depuneți dosarul la DGITL Sector 2.</li>
-        </ol>
+        <div>
+          <h3 className="subheading">Ce urmează</h3>
+          <OrderedList>
+            <ListItem>Generați și descărcați PDF-ul fiecărei declarații.</ListItem>
+            <ListItem>Tipăriți, semnați și ștampilați declarațiile.</ListItem>
+            <ListItem>Atașați copiile documentelor enumerate la anexe.</ListItem>
+            <ListItem>Depuneți dosarul la DGITL Sector 2.</ListItem>
+          </OrderedList>
+        </div>
 
         <h3 className="subheading">PDF-urile declarațiilor</h3>
         {pdf ? (

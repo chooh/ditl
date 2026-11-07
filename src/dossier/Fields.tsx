@@ -1,5 +1,5 @@
 import { Accordion, AccordionItem, Button, ContainedList, ContainedListItem, FormGroup, RadioButton, RadioButtonGroup, Select, SelectItem, Tag } from '@carbon/react'
-import { Add, Edit, TrashCan } from '@carbon/icons-react'
+import { Add, TrashCan } from '@carbon/icons-react'
 import { Fragment, useState } from 'react'
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AddressFields, AttachmentsFields, ErrorText, RadioGroup, TextField } from '../form/fields'
@@ -259,29 +259,22 @@ function DeedsSection() {
             const used = properties.flatMap((p, j) => (p.deedId === deed?.id ? [j + 1] : []))
             const issues = subs.find((s) => s.id === deedStep(i))?.issues ?? 0
             return (
+              // Строка открывает акт; удалить можно только неиспользуемый.
               <ContainedListItem
                 key={field.id}
+                onClick={() => sections.goSub(deedStep(i))}
                 action={
-                  <div className="item-actions">
+                  fields.length > 1 &&
+                  used.length === 0 && (
                     <Button
                       kind="ghost"
                       hasIconOnly
-                      renderIcon={Edit}
-                      iconDescription={`Modifică actul ${i + 1}`}
+                      renderIcon={TrashCan}
+                      iconDescription={`Șterge actul ${i + 1}`}
                       tooltipAlignment="end"
-                      onClick={() => sections.goSub(deedStep(i))}
+                      onClick={() => remove(i)}
                     />
-                    {fields.length > 1 && used.length === 0 && (
-                      <Button
-                        kind="ghost"
-                        hasIconOnly
-                        renderIcon={TrashCan}
-                        iconDescription={`Șterge actul ${i + 1}`}
-                        tooltipAlignment="end"
-                        onClick={() => remove(i)}
-                      />
-                    )}
-                  </div>
+                  )
                 }
               >
                 <span className="review-heading">
@@ -417,29 +410,21 @@ function PropertiesSection() {
             const issues = subs.filter((s) => s.id.startsWith(`property-${i}-`)).reduce((n, s) => n + s.issues, 0)
             const address = property ? [unitAddress(property), property.address.locality].filter(Boolean).join(', ') : ''
             return (
+              // Строка открывает объект.
               <ContainedListItem
                 key={field.id}
+                onClick={() => sections.goSub(propertyStep(i, 'address'))}
                 action={
-                  <div className="item-actions">
+                  fields.length > 1 && (
                     <Button
                       kind="ghost"
                       hasIconOnly
-                      renderIcon={Edit}
-                      iconDescription={`Modifică imobilul ${i + 1}`}
+                      renderIcon={TrashCan}
+                      iconDescription={`Șterge imobilul ${i + 1}`}
                       tooltipAlignment="end"
-                      onClick={() => sections.goSub(propertyStep(i, 'address'))}
+                      onClick={() => remove(i)}
                     />
-                    {fields.length > 1 && (
-                      <Button
-                        kind="ghost"
-                        hasIconOnly
-                        renderIcon={TrashCan}
-                        iconDescription={`Șterge imobilul ${i + 1}`}
-                        tooltipAlignment="end"
-                        onClick={() => remove(i)}
-                      />
-                    )}
-                  </div>
+                  )
                 }
               >
                 <span className="review-heading">

@@ -1,17 +1,21 @@
-import { Button, InlineNotification, Modal, Toggletip, ToggletipButton, ToggletipContent } from '@carbon/react'
-import { Idea, Information, SidePanelClose, SidePanelOpen } from '@carbon/icons-react'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { Callout, HeaderGlobalAction, HeaderPanel, ListItem, Toggletip, ToggletipButton, ToggletipContent, UnorderedList } from '@carbon/react'
+import { Close, Help as HelpIcon, Information } from '@carbon/icons-react'
+import { createContext, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode, type Ref } from 'react'
 import { HELP, type Help, type HelpTopic } from './content'
 
 /**
  * Подсказки к открытому экрану. Экран сообщает свою тему (useHelpTopic); по ней
- * боковая панель на широком экране и окно «Ajutor» из шапки показывают советы.
+ * панель «Ajutor» в шапке (Carbon HeaderPanel) показывает советы.
  */
 type HelpApi = {
   topic: HelpTopic | undefined
   setTopic(topic: HelpTopic): void
-  /** Окно «Ajutor»: по умолчанию — советы к открытому экрану. */
+  /** Тема открытой панели; undefined — панель закрыта. */
+  shown: HelpTopic | undefined
+  /** Открыть панель: по умолчанию — советы к открытому экрану. */
   open(topic?: HelpTopic): void
+  toggle(): void
+  close(): void
 }
 
 const HelpContext = createContext<HelpApi | null>(null)
@@ -28,122 +32,98 @@ export function useHelpTopic(topic: HelpTopic | undefined) {
 
 export function HelpProvider({ children }: { children: ReactNode }) {
   const [topic, setTopic] = useState<HelpTopic>()
-  const [modal, setModal] = useState<HelpTopic>()
-  const help = modal && HELP[modal]
+  const [shown, setShown] = useState<HelpTopic>()
+  const open = (t?: HelpTopic) => setShown(t ?? topic ?? 'welcome')
+  const api: HelpApi = {
+    topic,
+    setTopic,
+    shown,
+    open,
+    toggle: () => (shown ? setShown(undefined) : open()),
+    close: () => setShown(undefined),
+  }
+  return <HelpContext.Provider value={api}>{children}</HelpContext.Provider>
+}
+
+/** Кнопка «Ajutor» и панель советов — внутри Carbon Header. */
+export function HelpHeaderAction() {
+  const help = useHelp()!
+  const heading = useRef<HTMLHeadingElement>(null)
+  const expanded = !!help.shown
+  // У HeaderGlobalAction и HeaderPanel в типах нет этих свойств, но они передают их элементу.
+  // Фокус остаётся в панели: иначе её закроет уход фокуса, а клик тут же откроет снова.
+  const keepFocus = { onMouseDown: (e: MouseEvent) => e.preventDefault() }
+  const panelId = { id: 'help-panel' }
+  // Открытая панель получает фокус — экранный диктор прочитает советы; уход фокуса её закрывает.
+  useEffect(() => {
+    if (help.shown) heading.current?.focus()
+  }, [help.shown])
   return (
-    <HelpContext.Provider value={{ topic, setTopic, open: (t) => setModal(t ?? topic ?? 'welcome') }}>
-      {children}
-      {help && (
-        <Modal
-          open
-          passiveModal
-          size="sm"
-          modalLabel="Ajutor"
-          modalHeading={help.title}
-          closeButtonLabel="Închide"
-          onRequestClose={() => setModal(undefined)}
-        >
-          <HelpBody help={help} />
-        </Modal>
-      )}
-    </HelpContext.Provider>
+    <>
+      <HeaderGlobalAction
+        aria-label={expanded ? 'Închide ajutorul' : 'Ajutor'}
+        aria-expanded={expanded}
+        aria-controls="help-panel"
+        isActive={expanded}
+        tooltipAlignment="end"
+        {...keepFocus}
+        onClick={help.toggle}
+      >
+        {expanded ? <Close size={20} /> : <HelpIcon size={20} />}
+      </HeaderGlobalAction>
+      <HeaderPanel {...panelId} aria-label="Ajutor" expanded={expanded} onHeaderPanelFocus={help.close}>
+        {help.shown && <HelpBody help={HELP[help.shown]} heading={heading} />}
+      </HeaderPanel>
+    </>
   )
 }
 
-function HelpBody({ help }: { help: Help }) {
+function HelpBody({ help, heading }: { help: Help; heading: Ref<HTMLHeadingElement> }) {
   return (
     <div className="help-body">
-      <p className="help-lead">{help.intro ?? help.short}</p>
-      {help.warning && <InlineNotification kind="warning" lowContrast hideCloseButton title={help.warning} />}
+      <h2 className="help-title" ref={heading} tabIndex={-1}>
+        {help.title}
+      </h2>
+      <p>{help.intro ?? help.short}</p>
+      {help.warning && <Callout kind="warning" lowContrast title={help.warning} />}
       {help.where && (
         <>
-          <p className="help-subtitle">Unde găsiți datele</p>
-          <ul className="help-list">
+          <h3 className="help-subtitle">Unde găsiți datele</h3>
+          <UnorderedList>
             {help.where.map((w) => (
-              <li key={w}>{w}</li>
+              <ListItem key={w}>{w}</ListItem>
             ))}
-          </ul>
+          </UnorderedList>
         </>
       )}
       {help.tips && (
         <>
-          <p className="help-subtitle">Sfaturi</p>
-          <ul className="help-list">
+          <h3 className="help-subtitle">Sfaturi</h3>
+          <UnorderedList>
             {help.tips.map((t) => (
-              <li key={t}>{t}</li>
+              <ListItem key={t}>{t}</ListItem>
             ))}
-          </ul>
+          </UnorderedList>
         </>
       )}
     </div>
   )
 }
 
-/** Панель свёрнута или открыта — запоминается в этом браузере. */
-const PANEL_KEY = 'ditl.help.panel'
-
-function panelOpen(): boolean {
-  try {
-    return localStorage.getItem(PANEL_KEY) !== 'closed'
-  } catch {
-    return true
-  }
-}
-
-/** Советы к открытому экрану — колонка справа от мастера, только на широком экране (см. styles.scss). */
-export function HelpAside() {
-  const topic = useHelp()?.topic
-  const [open, setOpen] = useState(panelOpen)
-  if (!topic) return null
-  const help: Help = HELP[topic]
-  const toggle = () => {
-    setOpen(!open)
-    try {
-      localStorage.setItem(PANEL_KEY, open ? 'closed' : 'open')
-    } catch {
-      // Не запомнится — не страшно.
-    }
-  }
-  return (
-    <aside className={`help-aside${open ? '' : ' help-aside--collapsed'}`} aria-label="Sfaturi pentru acest ecran">
-      <div className="help-aside-header">
-        <Idea size={20} aria-hidden />
-        {open && <p className="help-aside-title">{help.title}</p>}
-        <Button
-          kind="ghost"
-          size="sm"
-          hasIconOnly
-          renderIcon={open ? SidePanelClose : SidePanelOpen}
-          iconDescription={open ? 'Ascunde sfaturile' : 'Arată sfaturile'}
-          tooltipAlignment="end"
-          onClick={toggle}
-        />
-      </div>
-      {open && <HelpBody help={help} />}
-    </aside>
-  )
-}
-
-/** Короткая подсказка над полями — там, где боковой панели нет (узкий экран). */
+/** Короткая подсказка над полями; подробнее — в панели «Ajutor». */
 export function InlineTip({ topic }: { topic: HelpTopic }) {
   const ctx = useHelp()
   const help: Help = HELP[topic]
-  const more = !!(help.tips || help.where || help.intro || help.warning)
+  const more = !!ctx && !!(help.tips || help.where || help.intro || help.warning)
   return (
-    <div className="inline-tip">
-      <Idea size={16} aria-hidden className="inline-tip-icon" />
-      <p className="inline-tip-text">
-        {help.short}
-        {more && ctx && (
-          <>
-            {' '}
-            <button type="button" className="inline-tip-more" onClick={() => ctx.open(topic)}>
-              Mai multe sfaturi
-            </button>
-          </>
-        )}
-      </p>
-    </div>
+    <Callout
+      className="inline-tip"
+      kind="info"
+      lowContrast
+      title={help.short}
+      actionButtonLabel={more ? 'Mai multe sfaturi' : undefined}
+      onActionButtonClick={() => ctx?.open(topic)}
+    />
   )
 }
 

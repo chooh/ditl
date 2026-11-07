@@ -14,12 +14,12 @@ export const deedStep = (i: number) => `deed-${i}`
 
 /** Части объекта — по подэтапу на каждую. */
 const PROPERTY_PARTS = [
-  { part: 'address', title: 'actul și adresa', fields: ['deedId', 'address'], help: 'property.address' },
-  { part: 'building', title: 'clădirea', fields: ['building.type', 'building.purchaseValue'], help: 'property.building' },
-  { part: 'values', title: 'valoarea clădirii', fields: ['building.values'], help: 'property.values' },
-  { part: 'land', title: 'terenul', fields: ['land'], help: 'property.land' },
-  { part: 'annex', title: 'documente anexate', fields: ['attachments'], help: 'property.annex' },
-] as const satisfies readonly { part: string; title: string; fields: readonly string[]; help: HelpTopic }[]
+  { part: 'address', title: 'actul și adresa', step: 'Act și adresă', fields: ['deedId', 'address'], help: 'property.address' },
+  { part: 'building', title: 'clădirea', step: 'Clădirea', fields: ['building.type', 'building.purchaseValue'], help: 'property.building' },
+  { part: 'values', title: 'valoarea clădirii', step: 'Valoarea', fields: ['building.values'], help: 'property.values' },
+  { part: 'land', title: 'terenul', step: 'Terenul', fields: ['land'], help: 'property.land' },
+  { part: 'annex', title: 'documente anexate', step: 'Anexe', fields: ['attachments'], help: 'property.annex' },
+] as const satisfies readonly { part: string; title: string; step: string; fields: readonly string[]; help: HelpTopic }[]
 
 export type PropertyPart = (typeof PROPERTY_PARTS)[number]['part']
 
@@ -40,18 +40,20 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
       {
         id: 'identity',
         title: 'Date de identificare',
+        step: 'Identificare',
         fields: ['company.name', 'company.taxId', 'company.uniqueId', 'company.tradeRegister'],
         help: 'company.identity',
       },
       {
         id: 'contact',
         title: 'Contact și comunicare',
+        step: 'Contact',
         fields: ['company.phone', 'company.fax', 'company.email', 'company.emailOnly'],
         help: 'company.contact',
       },
-      { id: 'bank', title: 'Contul bancar', fields: ['company.bank'], help: 'company.bank' },
+      { id: 'bank', title: 'Contul bancar', step: 'Cont bancar', fields: ['company.bank'], help: 'company.bank' },
       { id: 'seat', title: 'Sediul', fields: ['company.seat'], help: 'company.seat' },
-      { id: 'other', title: 'Alte adrese (dacă este cazul)', fields: ['company.correspondence', 'company.foreignResidence'], help: 'company.other' },
+      { id: 'other', title: 'Alte adrese (dacă este cazul)', step: 'Alte adrese', fields: ['company.correspondence', 'company.foreignResidence'], help: 'company.other' },
     ],
   },
   {
@@ -64,10 +66,11 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
       {
         id: 'person',
         title: 'Calitatea și datele personale',
+        step: 'Date personale',
         fields: ['signatory.role', 'signatory.lastName', 'signatory.firstName', 'signatory.personalId', 'signatory.phone', 'signatory.email'],
         help: 'signatory.person',
       },
-      { id: 'id', title: 'Actul de identitate', fields: ['signatory.idDocument'], help: 'signatory.id' },
+      { id: 'id', title: 'Actul de identitate', step: 'Act de identitate', fields: ['signatory.idDocument'], help: 'signatory.id' },
       { id: 'address', title: 'Domiciliul', fields: ['signatory.address'], help: 'signatory.address' },
     ],
   },
@@ -80,7 +83,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     // По подэтапу на акт и список актов; ошибка «нет ни одного акта» — у списка.
     subSteps: ({ deeds }) => [
       ...deeds.map((_, i) => ({ id: deedStep(i), title: `Actul ${i + 1}`, fields: [`deeds.${i}`], help: 'deed' as const })),
-      { id: 'deeds-list', title: 'Lista actelor', fields: [], exact: ['deeds'], help: 'deeds.list' },
+      { id: 'deeds-list', title: 'Lista actelor', step: 'Lista', fields: [], exact: ['deeds'], help: 'deeds.list' },
     ],
   },
   {
@@ -91,14 +94,17 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     summary: ({ properties }) => join(count(properties.length, 'imobil', 'imobile'), ...properties.map(unitAddress)),
     subSteps: ({ properties }) => [
       ...properties.flatMap((_, i) =>
-        PROPERTY_PARTS.map(({ part, title, fields, help }) => ({
+        PROPERTY_PARTS.map(({ part, title, step, fields, help }) => ({
           id: propertyStep(i, part),
           title: `Imobilul ${i + 1} — ${title}`,
+          step,
+          // В индикаторе — части одного объекта и список.
+          group: `property-${i}`,
           fields: fields.map((f) => `properties.${i}.${f}`),
           help,
         })),
       ),
-      { id: 'properties-list', title: 'Lista imobilelor', fields: [], exact: ['properties'], help: 'properties.list' },
+      { id: 'properties-list', title: 'Lista imobilelor', step: 'Lista', fields: [], exact: ['properties'], help: 'properties.list' },
     ],
   },
   {
