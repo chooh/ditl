@@ -66,27 +66,36 @@ function CompanySection() {
         <div className="grid">
           <TextField name="company.name" label="Denumire contribuabil" wide autoComplete="organization" />
           <TextField
-            name="company.taxId"
-            label="Codul de identificare fiscală (CIF)"
-            placeholder="RO12345678"
-            autoComplete="off"
-            tip="CUI-ul cu prefixul RO, dacă firma este plătitoare de TVA. Altfel, scrieți același număr ca la CUI."
-          />
-          <TextField
             name="company.uniqueId"
-            label="Codul unic de identificare (CUI)"
+            label="CUI"
+            helperText="Codul unic de identificare"
             inputMode="numeric"
             placeholder="12345678"
             autoComplete="off"
             tip="Numărul din certificatul de înregistrare ONRC, fără RO. Ultima cifră este cifra de control."
           />
-          <TextField name="company.tradeRegister.office" label="Înregistrat la registrul comerțului" placeholder="ONRC București" autoComplete="off" />
+          <TextField
+            name="company.taxId"
+            label="CIF"
+            helperText="Codul de identificare fiscală"
+            placeholder="RO12345678"
+            autoComplete="off"
+            tip="CUI-ul cu prefixul RO, dacă firma este plătitoare de TVA. Altfel, scrieți același număr ca la CUI."
+          />
+          <TextField
+            name="company.tradeRegister.office"
+            label="Registrul comerțului"
+            helperText="Oficiul la care este înregistrată firma"
+            placeholder="ONRC București"
+            autoComplete="off"
+          />
           <TextField
             name="company.tradeRegister.number"
-            label="La nr."
+            label="Nr. de înregistrare"
+            helperText="Numărul de ordine în registrul comerțului"
             placeholder="J40/1234/2006"
             autoComplete="off"
-            tip="Numărul de ordine în Registrul Comerțului, exact ca în certificatul ONRC."
+            tip="Exact ca în certificatul de înregistrare ONRC."
           />
         </div>
       </SubStep>

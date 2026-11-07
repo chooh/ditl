@@ -82,7 +82,7 @@ describe('мастер', () => {
     expect(currentStep()).toBe('Contribuabilul (persoana juridică)')
     expect(currentSubStep()).toBe('Contact și comunicare')
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3 }))
-    await waitFor(() => expect(input('Codul unic de identificare (CUI)').getAttribute('aria-invalid')).toBe('true'))
+    await waitFor(() => expect(input('CUI').getAttribute('aria-invalid')).toBe('true'))
     // Раздел ещё не покинут — в индикаторе ошибок нет.
     expect(stepStatus('Contribuabil')).toBe('Contribuabil: de completat')
     expect(screen.getByRole('button', { name: 'Identificare: conține erori' })).toBeTruthy()
