@@ -61,6 +61,15 @@ describe('dossierSchema', () => {
     ])
   })
 
+  it('номер в registrul comerțului — в формате ONRC, новом или старом', () => {
+    const withNumber = (number: string) => ({ ...sample, company: { ...sample.company, tradeRegister: { ...sample.company.tradeRegister, number } } })
+    expect(dossierSchema.parse(withNumber(' j2026 123456 002 ')).company.tradeRegister.number).toBe('J2026123456002')
+    expect(issuePaths(withNumber('J40/1234/2006'))).toEqual([])
+    expect(issuePaths(withNumber(''))).toEqual([])
+    expect(issuePaths(withNumber('J202612345600'))).toEqual(['company.tradeRegister.number'])
+    expect(issuePaths(withNumber('40/1234/2006'))).toEqual(['company.tradeRegister.number'])
+  })
+
   it('CNP обязателен для împuternicit, для законного представителя — нет', () => {
     expect(issuePaths(withSignatory({ personalId: '' }))).toEqual(['signatory.personalId'])
     expect(issuePaths(withSignatory({ role: 'representative', personalId: '' }))).toEqual([])

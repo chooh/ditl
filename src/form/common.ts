@@ -90,6 +90,17 @@ export const iban = z
   .transform((s) => s.replace(/\s/g, '').toUpperCase())
   .refine((s) => s === '' || isValidIban(s), 'IBAN invalid')
 
+/**
+ * Номер в registrul comerțului. Единый формат ONRC с 2024 года — YAAAAXXXXXXJJC:
+ * реестр (J, F, C), год регистрации, 6 цифр номера, код уезда, контрольная цифра.
+ * На старых сертификатах — «J40/1234/2006»; его тоже принимаем.
+ */
+export const tradeRegisterNumber = z
+  .string()
+  .transform((s) => s.replace(/\s/g, '').toUpperCase())
+  .refine((s) => s === '' || /^[JFC]\d{13}$/.test(s) || /^[JFC]\d{1,2}\/\d{1,6}\/\d{4}$/.test(s), 'Formatul este J2026123456002 (pe certificatele vechi: J40/1234/2006)')
+  .pipe(z.string().max(30))
+
 /** Почтовый адрес: все поля; какие из них показывать — решает форма. */
 export const address = z.object({
   street: text(80), // strada

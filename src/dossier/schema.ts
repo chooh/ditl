@@ -22,6 +22,7 @@ import {
   text,
   toDate,
   todayIso,
+  tradeRegisterNumber,
 } from '../form/common'
 
 /**
@@ -77,7 +78,7 @@ const company = z.object({
   foreignResidence: text(200), // adresa de rezidență în alt stat decât România
   tradeRegister: z.object({
     office: text(80), // înregistrat la registrul comerțului
-    number: text(30), // la nr.
+    number: tradeRegisterNumber, // la nr.
   }),
   bank: z.object({
     iban, // cont IBAN

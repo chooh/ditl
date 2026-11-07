@@ -72,7 +72,7 @@ export function sampleDossier(): DossierInput {
         locality: 'București',
       },
       foreignResidence: 'Rue de la Paix 12, 75002 Paris, Franța',
-      tradeRegister: { office: 'ONRC București', number: 'J40/1234/2006' },
+      tradeRegister: { office: 'ONRC București', number: 'J2006001234400' },
       bank: { iban: 'RO49 AAAA 1B31 0075 9384 0000', name: 'Banca Exemplu S.A.' },
     },
     signatory: {

@@ -68,32 +68,28 @@ function CompanySection() {
           <TextField
             name="company.uniqueId"
             label="CUI"
-            helperText="Codul unic de identificare"
             inputMode="numeric"
             placeholder="12345678"
             autoComplete="off"
-            tip="Numărul din certificatul de înregistrare ONRC, fără RO. Ultima cifră este cifra de control."
+            tip="Codul unic de identificare — numărul din certificatul de înregistrare ONRC (fără RO). Ultima cifră este cifra de control."
           />
           <TextField
             name="company.taxId"
             label="CIF"
-            helperText="Codul de identificare fiscală"
             placeholder="RO12345678"
             autoComplete="off"
-            tip="CUI-ul cu prefixul RO, dacă firma este plătitoare de TVA. Altfel, scrieți același număr ca la CUI."
+            tip="Codul de identificare fiscală — CUI-ul cu prefixul RO, dacă firma este plătitoare de TVA. Altfel, scrieți același număr ca la CUI."
           />
           <TextField
             name="company.tradeRegister.office"
             label="Registrul comerțului"
-            helperText="Oficiul la care este înregistrată firma"
             placeholder="ONRC București"
             autoComplete="off"
           />
           <TextField
             name="company.tradeRegister.number"
-            label="Nr. de înregistrare"
-            helperText="Numărul de ordine în registrul comerțului"
-            placeholder="J40/1234/2006"
+            label="Nr. de ordine în registrul comerțului"
+            placeholder="J2026123456002"
             autoComplete="off"
             tip="Exact ca în certificatul de înregistrare ONRC."
           />
@@ -176,10 +172,10 @@ function SignatorySection() {
           <TextField name="signatory.firstName" label="Prenumele" autoComplete="section-signatory given-name" />
           <TextField
             name="signatory.personalId"
-            label="Codul numeric personal"
+            label="CNP"
             inputMode="numeric"
             autoComplete="off"
-            tip="13 cifre. Obligatoriu pentru împuternicit; ultima cifră este cifra de control."
+            tip="Codul numeric personal, 13 cifre. Obligatoriu pentru împuternicit; ultima cifră este cifra de control."
           />
           <TextField name="signatory.phone" label="Telefon" type="tel" autoComplete="section-signatory tel" />
           <TextField name="signatory.email" label="Adresa de poștă electronică" type="email" wide autoComplete="section-signatory email" />
@@ -201,9 +197,10 @@ function SignatorySection() {
           <TextField name="signatory.idDocument.issuedOn" label="La data de" type="date" autoComplete="off" />
           <TextField
             name="signatory.idDocument.validTill"
-            label="Valabil până la (gol — nelimitat)"
+            label="Valabil până la"
             type="date"
             autoComplete="off"
+            helperText="gol — valabil nelimitat"
             tip="Actul trebuie să fie valabil la data declarațiilor. Lăsați gol dacă este valabil nelimitat."
           />
           <datalist id="id-types">

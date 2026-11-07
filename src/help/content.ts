@@ -36,7 +36,7 @@ export const HELP = {
     tips: [
       'CUI-ul are între 2 și 10 cifre; ultima este cifra de control — aplicația o verifică.',
       'CIF-ul este CUI-ul cu prefixul RO dacă firma este plătitoare de TVA; altfel este identic cu CUI-ul.',
-      'Numărul de ordine în Registrul Comerțului se copiază exact din certificat, de exemplu J40/1234/2006.',
+      'Numărul de ordine în Registrul Comerțului se copiază exact din certificat. Din 2024 are forma J2026123456002: litera registrului (J pentru persoane juridice), anul înmatriculării, numărul de ordine din 6 cifre, codul județului și cifra de control. Certificatele mai vechi au forma J40/1234/2006.',
     ],
   },
   'company.contact': {
