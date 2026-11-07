@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
+// Сценарии целиком через userEvent идут до 4 с локально, а на раннере GitHub Actions — заметно
+// дольше; стандартных 5 с не хватает.
+vi.setConfig({ testTimeout: 20_000 })
+
 beforeAll(() => {
   // В jsdom нет scrollIntoView, scrollTo и ResizeObserver — их вызывают разделы,
   // экран результата и CodeSnippet из Carbon.
