@@ -271,8 +271,7 @@ body {
   padding: $spacing-05;
   color: theme.$text-primary;
 
-  > p,
-  .cds--actionable-notification {
+  > p {
     margin-block-end: $spacing-04;
   }
 }

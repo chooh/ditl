@@ -12,7 +12,6 @@ export type Help = {
   /** Где взять данные. */
   where?: readonly string[]
   tips?: readonly string[]
-  warning?: string
 }
 
 export const HELP = {
@@ -106,7 +105,6 @@ export const HELP = {
       'Completați „Data dobândirii” doar dacă diferă de data actului (de exemplu, la o predare-primire ulterioară).',
       'La documentele anexate scrieți copiile pe care le atașați pentru acest act, de exemplu „Contract de vânzare-cumpărare nr. 1234/2023”.',
     ],
-    warning: 'Declarațiile se depun în termen de 30 de zile de la data dobândirii.',
   },
   'deeds.list': {
     title: 'Lista actelor',

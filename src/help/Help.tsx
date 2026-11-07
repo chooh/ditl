@@ -91,7 +91,6 @@ function HelpBody({ help, heading }: { help: Help; heading: Ref<HTMLHeadingEleme
         {help.title}
       </h2>
       <p>{help.intro ?? help.short}</p>
-      {help.warning && <Callout kind="warning" lowContrast title={help.warning} />}
       {help.where && (
         <>
           <h3 className="help-subtitle">Unde găsiți datele</h3>
@@ -120,7 +119,7 @@ function HelpBody({ help, heading }: { help: Help; heading: Ref<HTMLHeadingEleme
 export function InlineTip({ topic }: { topic: HelpTopic }) {
   const ctx = useHelp()
   const help: Help = HELP[topic]
-  const more = !!ctx && !!(help.tips || help.where || help.intro || help.warning)
+  const more = !!ctx && !!(help.tips || help.where || help.intro)
   return (
     <Callout
       className="inline-tip"

@@ -1,4 +1,4 @@
-import { Button, ListItem, Tile, UnorderedList } from '@carbon/react'
+import { Button, Callout, ListItem, Tile, UnorderedList } from '@carbon/react'
 import { ArrowRight, Notebook } from '@carbon/icons-react'
 import { useEffect, useRef } from 'react'
 import { useHelpTopic } from '../help/Help'
@@ -72,6 +72,8 @@ export function Welcome({ returning, onStart, onSample }: WelcomeProps) {
         </div>
         <p className="hint">Durează 15–20 de minute. Progresul se salvează automat.</p>
       </div>
+
+      <Callout kind="warning" lowContrast title="Declarațiile se depun în termen de 30 de zile de la data dobândirii." />
 
       <div className="welcome-tiles">
         {STEPS.map((s, i) => (
