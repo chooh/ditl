@@ -3,6 +3,14 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
+import { compilePdf, loadCompiler } from './typst/compiler'
+
+// Настоящий компилятор — WASM из сети; здесь проверяется только, что PDF собираются сразу.
+vi.mock('./typst/compiler', () => ({
+  compilePdf: vi.fn(async () => new TextEncoder().encode('%PDF-1.7')),
+  loadCompiler: vi.fn(async () => {}),
+  TypstError: class extends Error {},
+}))
 
 // Сценарии целиком через userEvent идут до 4 с локально, а на раннере GitHub Actions — заметно
 // дольше; стандартных 5 с не хватает.
@@ -13,6 +21,8 @@ beforeAll(() => {
   // экран результата и CodeSnippet из Carbon.
   Element.prototype.scrollIntoView = () => {}
   window.scrollTo = () => {}
+  URL.createObjectURL ??= () => 'blob:test'
+  URL.revokeObjectURL ??= () => {}
   globalThis.ResizeObserver ??= class {
     observe() {}
     unobserve() {}
@@ -25,6 +35,8 @@ afterEach(() => {
   cleanup()
   localStorage.clear()
   vi.restoreAllMocks()
+  vi.mocked(compilePdf).mockClear()
+  vi.mocked(loadCompiler).mockClear()
 })
 
 type User = ReturnType<typeof userEvent.setup>
@@ -395,7 +407,7 @@ describe('черновики', () => {
 })
 
 describe('документы', () => {
-  it('ITL 002 и ITL 004; .typ скачиваются сразу, компилятор — только по кнопке', async () => {
+  it('ITL 002 и ITL 004: PDF собираются сразу, .typ — для специалистов', async () => {
     const blobs = captureDownloads()
     const user = userEvent.setup()
     render(<App />)
@@ -405,7 +417,11 @@ describe('документы', () => {
 
     await screen.findByRole('heading', { name: 'Documentele sunt gata' }, { timeout: 3000 })
     expect(screen.getByText(/S-au pregătit 2 declarații\./)).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Generează PDF-urile' })).toBeTruthy()
+    expect(compilePdf).toHaveBeenCalledTimes(2)
+    expect(await screen.findByTitle('Previzualizare PDF')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Descarcă PDF' })).toBeTruthy()
+    // Готовый PDF не пересобирается при показе.
+    expect(compilePdf).toHaveBeenCalledTimes(2)
 
     // Файлы .typ — в свёрнутом разделе для специалистов.
     await user.click(screen.getByRole('button', { name: 'Pentru specialiști: fișierele Typst' }))
@@ -419,5 +435,22 @@ describe('документы', () => {
     expect(source).toMatch(/^\/\/ Declarație fiscală ITL 004/)
     expect(source).toContain('denumire: "Exemplu Construcții Țărănești S.R.L."')
     expect(source).toContain('nrAct: "1234/2023"')
+  })
+
+  it('компилятор начинает грузиться на проверке; не загрузился — документы открываются, PDF можно повторить', async () => {
+    vi.mocked(compilePdf).mockRejectedValue(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const user = userEvent.setup()
+    render(<App />)
+    await fillSample(user)
+    expect(loadCompiler).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Generează documentele' }))
+    await screen.findByRole('heading', { name: 'Documentele sunt gata' }, { timeout: 3000 })
+    expect(await screen.findByText(/Motorul de tipărire nu a putut fi încărcat/)).toBeTruthy()
+
+    vi.mocked(compilePdf).mockResolvedValue(new TextEncoder().encode('%PDF-1.7'))
+    await user.click(screen.getByRole('button', { name: 'Încearcă din nou' }))
+    expect(await screen.findByTitle('Previzualizare PDF')).toBeTruthy()
   })
 })

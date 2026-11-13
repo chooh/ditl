@@ -1,7 +1,7 @@
 import { Button, Column, Grid, Header, HeaderGlobalBar, HeaderName, InlineNotification, Link, Loading, SkipToContent, Stack } from '@carbon/react'
 import { DocumentExport } from '@carbon/icons-react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { FormProvider, useForm, useFormContext, type FieldErrors } from 'react-hook-form'
 import { loadLocalities } from './address/siruta'
@@ -13,7 +13,7 @@ import { SECTIONS } from './dossier/sections'
 import { DraftsPanel, useDrafts, type Session } from './drafts/Drafts'
 import { listDrafts, loadActiveDraft } from './drafts/storage'
 import { todayIso } from './form/common'
-import { SectionsProvider, useSections } from './form/sections'
+import { REVIEW, SectionsProvider, useSections } from './form/sections'
 import { Review, StepButtons, StepIndicator } from './form/wizard'
 import { HelpHeaderAction, HelpProvider, useHelpTopic } from './help/Help'
 import { Result, type TypstDocument } from './output/Result'
@@ -138,13 +138,12 @@ function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout:
       // справочник SIRUTA к этому времени обычно уже загружен полями адреса.
       const [{ bundleTypst }, localities] = await Promise.all([import('./typst/bundle'), loadLocalities(), wait(MIN_GENERATING_MS)])
       const date = formatDate(todayIso())
-      setDocs(
-        documentsFor(data, localities).map(({ template, title, label, filename, data }) => ({
-          label,
-          filename,
-          source: bundleTypst(template, data, { title, filename: `${filename}.typ`, date }),
-        })),
-      )
+      const sources = documentsFor(data, localities).map(({ template, title, label, filename, data }) => ({
+        label,
+        filename,
+        source: bundleTypst(template, data, { title, filename: `${filename}.typ`, date }),
+      }))
+      setDocs(await withPdfs(sources))
     } catch (e) {
       console.error(e)
       setError('Documentele nu au putut fi pregătite. Încercați din nou.')
@@ -195,6 +194,24 @@ function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout:
   )
 }
 
+/**
+ * PDF сразу при генерации документов. Компилятор (≈ 11 МБ по сети) — отдельный чанк, обычно
+ * уже загруженный на шаге проверки (см. DossierForm). Не загрузился или шаблон не собрался —
+ * документы всё равно показываются: экран результата сообщит об ошибке и даст повторить.
+ */
+async function withPdfs(docs: TypstDocument[]): Promise<TypstDocument[]> {
+  try {
+    const { compilePdf } = await import('./typst/compiler')
+    const result: TypstDocument[] = []
+    // По очереди: у компилятора один исходник /main.typ.
+    for (const doc of docs) result.push({ ...doc, pdf: await compilePdf(doc.source) })
+    return result
+  } catch (e) {
+    console.error(e)
+    return docs
+  }
+}
+
 /** Пути полей с ошибками: «property.address.street», «property.land.areas» (ошибка всей группы). */
 function errorPaths(errors: FieldErrors, prefix = ''): string[] {
   return Object.entries(errors).flatMap(([key, value]) => {
@@ -219,6 +236,11 @@ function DossierForm({ session, onSwitch, hidden, onValid, onInvalid: onFailed, 
   const sections = useSections()
   const drafts = useDrafts(session, onSwitch)
   useHelpTopic(hidden ? undefined : sections.helpTopic)
+  // На проверке компилятор начинает грузиться заранее — к нажатию «Generează documentele» он обычно готов.
+  const reviewing = sections.current === REVIEW
+  useEffect(() => {
+    if (reviewing) import('./typst/compiler').then((m) => m.loadCompiler()).catch(() => {})
+  }, [reviewing])
 
   const onInvalid = (errors: FieldErrors) => {
     // Синхронно открыть раздел и подэтап с первой ошибкой — сразу после этого react-hook-form

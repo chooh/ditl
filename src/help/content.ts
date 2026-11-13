@@ -183,11 +183,11 @@ export const HELP = {
     title: 'Ce urmează',
     short: 'Descărcați PDF-urile, semnați-le și depuneți-le la DGITL Sector 2.',
     tips: [
-      '1. Generați și descărcați PDF-urile celor două declarații.',
+      '1. Descărcați PDF-urile celor două declarații.',
       '2. Tipăriți, semnați și ștampilați declarațiile.',
       '3. Atașați copiile documentelor enumerate la „Anexe”.',
       '4. Depuneți dosarul la DGITL Sector 2 — la ghișeu sau prin canalele online ale instituției.',
-      'La prima generare, browserul descarcă o singură dată motorul de tipărire (aproximativ 11 MB); apoi îl ia din cache.',
+      'Pentru PDF, browserul descarcă o singură dată motorul de tipărire (aproximativ 11 MB) — începe la etapa de verificare; apoi îl ia din cache.',
     ],
   },
 } as const satisfies Record<string, Help>

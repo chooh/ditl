@@ -5,12 +5,13 @@ import { compilePdf, TypstError } from '../typst/compiler'
 import { downloadUrl } from './download'
 
 /**
- * Загружает компилятор Typst (отдельный чанк + WASM) и собирает PDF из .typ.
- * Сам компонент тоже грузится лениво — см. Result.
+ * Предпросмотр и скачивание PDF. Обычно PDF уже собран при генерации документов; если нет
+ * (компилятор не загрузился) или пользователь нажал «Încearcă din nou» — собирает из .typ.
+ * Сам компонент грузится лениво — см. Result.
  */
 type State = { step: 'compiling' } | { step: 'done'; url: string } | { step: 'error'; message: string; details?: string }
 
-export default function PdfView({ source, filename }: { source: string; filename: string }) {
+export default function PdfView({ source, pdf, filename }: { source: string; pdf?: Uint8Array; filename: string }) {
   const [state, setState] = useState<State>({ step: 'compiling' })
   const [attempt, setAttempt] = useState(0)
 
@@ -18,7 +19,8 @@ export default function PdfView({ source, filename }: { source: string; filename
     let cancelled = false
     let url: string | undefined
     setState({ step: 'compiling' })
-    compilePdf(source).then(
+    const bytes = attempt === 0 && pdf ? Promise.resolve(pdf) : compilePdf(source)
+    bytes.then(
       (bytes) => {
         if (cancelled) return
         url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
@@ -38,10 +40,10 @@ export default function PdfView({ source, filename }: { source: string; filename
       cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [source, attempt])
+  }, [source, pdf, attempt])
 
   if (state.step === 'compiling') {
-    return <InlineLoading status="active" description="Se pregătește motorul de tipărire și se generează PDF-ul…" />
+    return <InlineLoading status="active" description="Se generează PDF-ul…" />
   }
 
   if (state.step === 'error') {

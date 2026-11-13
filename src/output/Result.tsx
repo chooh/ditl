@@ -13,16 +13,13 @@ import {
   SelectItem,
   Stack,
 } from '@carbon/react'
-import { ArrowLeft, DocumentPdf, Download } from '@carbon/icons-react'
+import { ArrowLeft, Download } from '@carbon/icons-react'
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import { useHelpTopic } from '../help/Help'
 import { downloadBlob } from './download'
 
-/** Компилятор — отдельный чанк; модуль не грузится, пока пользователь не попросил PDF. */
+/** Предпросмотр тянет за собой компилятор — отдельный чанк, не нужный до генерации документов. */
 const PdfView = lazy(() => import('./PdfView'))
-
-/** Пользователь уже согласился загрузить компилятор — дальше PDF собирается сразу. */
-let compilerAccepted = false
 
 export type TypstDocument = {
   /** Какой это документ: «ITL 002 — Șos. Mihai Bravu nr. 200, ap. 18». */
@@ -31,6 +28,8 @@ export type TypstDocument = {
   source: string
   /** Имя файла без расширения. */
   filename: string
+  /** PDF, собранный при генерации; нет — не удалось, PdfView соберёт заново. */
+  pdf?: Uint8Array
 }
 
 /**
@@ -39,7 +38,6 @@ export type TypstDocument = {
  */
 export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => void }) {
   const heading = useRef<HTMLHeadingElement>(null)
-  const [pdf, setPdf] = useState(compilerAccepted)
   const [selected, setSelected] = useState(0)
   const selectId = useId()
   useHelpTopic('result')
@@ -61,13 +59,13 @@ export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => 
             kind="success"
             lowContrast
             title={docs.length === 1 ? 'S-a pregătit 1 declarație.' : `S-au pregătit ${docs.length} declarații.`}
-            subtitle="Generați PDF-urile, apoi tipăriți-le, semnați-le și depuneți-le."
+            subtitle="Descărcați PDF-urile, apoi tipăriți-le, semnați-le și depuneți-le."
           />
         </div>
         <div>
           <h3 className="subheading">Ce urmează</h3>
           <OrderedList>
-            <ListItem>Generați și descărcați PDF-ul fiecărei declarații.</ListItem>
+            <ListItem>Descărcați PDF-ul fiecărei declarații.</ListItem>
             <ListItem>Tipăriți, semnați și ștampilați declarațiile.</ListItem>
             <ListItem>Atașați copiile documentelor enumerate la anexe.</ListItem>
             <ListItem>Depuneți dosarul la DGITL Sector 2.</ListItem>
@@ -75,38 +73,16 @@ export function Result({ docs, onBack }: { docs: TypstDocument[]; onBack: () => 
         </div>
 
         <h3 className="subheading">PDF-urile declarațiilor</h3>
-        {pdf ? (
-          <>
-            {docs.length > 1 && (
-              <Select id={selectId} labelText="Documentul" value={selected} onChange={(e) => setSelected(Number(e.target.value))}>
-                {docs.map((d, i) => (
-                  <SelectItem key={d.filename} value={i} text={d.label} />
-                ))}
-              </Select>
-            )}
-            <Suspense fallback={<InlineLoading status="active" description="Se pregătește motorul de tipărire…" />}>
-              <PdfView key={doc.filename} source={doc.source} filename={doc.filename} />
-            </Suspense>
-          </>
-        ) : (
-          <>
-            <p className="note">
-              Pentru previzualizare și PDF, browserul descarcă o singură dată motorul de tipărire — aproximativ 11 MB; apoi îl ia din
-              cache. Datele rămân în browser.
-            </p>
-            <div>
-              <Button
-                renderIcon={DocumentPdf}
-                onClick={() => {
-                  compilerAccepted = true
-                  setPdf(true)
-                }}
-              >
-                Generează PDF-urile
-              </Button>
-            </div>
-          </>
+        {docs.length > 1 && (
+          <Select id={selectId} labelText="Documentul" value={selected} onChange={(e) => setSelected(Number(e.target.value))}>
+            {docs.map((d, i) => (
+              <SelectItem key={d.filename} value={i} text={d.label} />
+            ))}
+          </Select>
         )}
+        <Suspense fallback={<InlineLoading status="active" description="Se pregătește previzualizarea…" />}>
+          <PdfView key={doc.filename} source={doc.source} pdf={doc.pdf} filename={doc.filename} />
+        </Suspense>
         <div>
           <Button kind="secondary" renderIcon={ArrowLeft} onClick={onBack}>
             Modifică datele
