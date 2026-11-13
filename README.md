@@ -227,10 +227,7 @@ node scripts/siruta.ts siruta_s1_2026.csv   # CSV с data.gov.ro → src/address
   «Drâmbar, Ciugud»), «Județul/Sectorul» — сектор у Бухареста («Sector 2»), иначе județ.
   У адреса для переписки на бланке одна графа — туда идёт всё: «București, Sector 2»,
   «Drâmbar, Ciugud, jud. Alba».
-- В шапке ITL 004 у фирмы два адреса — «cu sediul social în…» и «cu adresa de corespondență în…»
-  (второй — только если заполнен), а согласие «Sunt de acord ca actele administrative fiscale…»
-  с чекбоксом идёт в скобках сразу за адресом e-mail; без e-mail не печатается и согласие.
-- В шапке ITL 004 домициль подписанта и адреса фирмы (и адреса участков) печатаются строкой, без подписей бланка
+- В шапке ITL 004 домициль подписанта и sediu фирмы (и адреса участков) печатаются строкой, без подписей бланка
   «municipiul/orașul/comuna», «satul/sectorul» и без «România»: тип пункта берётся из SIRUTA —
   «municipiul București, sectorul 2, Str. Lizeanu nr. 21, …», «municipiul Brașov, județul Brașov, …»,
   «satul Drâmbar, comuna Ciugud, județul Alba, …». «str.» добавляется, только если в улице

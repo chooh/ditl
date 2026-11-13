@@ -3,9 +3,7 @@
 // - пункты «1. începând cu data de…» и строки таблицы печатаются только для заявленных участков;
 // - из «dobândit/închiriat/concesionat/…» остаётся только выбранный вариант;
 // - в шапке незаполненные поля не печатаются вместе с подписью; адреса в шапке и у участков —
-//   строкой с типом населённого пункта («municipiul Brașov, județul Brașov») вместо «municipiul/orașul/comuna»;
-// - у юрлица два адреса — sediul social и адрес для корреспонденции;
-// - согласие на сообщение актов только по e-mail — сразу за адресом почты, а не после таблицы.
+//   строкой с типом населённого пункта («municipiul Brașov, județul Brașov») вместо «municipiul/orașul/comuna».
 
 #import "common.typ": *
 
@@ -65,15 +63,11 @@
   [în calitate de reprezentant al #strong(blank(c.denumire, width: 5cm))],
   ..fields(
     ("Codul de identificare fiscală", c.cif),
-    ("cu sediul social în", c.sediu),
-    ("cu adresa de corespondență în", c.corespondenta),
+    ("cu sediul în", c.sediu),
     ("tel.", c.telefon),
     ("fax", c.fax),
+    ("adresă de e-mail", c.email),
   ),
-  // Согласие относится к адресу почты; без адреса нечего и соглашаться.
-  ..if c.email != "" {
-    ([adresă de e-mail #c.email (#check(d.comunicareEmail) sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică)],)
-  },
   registru,
   ..fields(("cont IBAN", c.iban), ("deschis la", c.banca)),
 ).filter(x => x != none)
@@ -145,6 +139,8 @@
   Beneficiez de scutire/reducere de la plata impozitului pe teren în cotă de #blank(d.scutire.cota, width: 1.5cm),
   în calitate de #blank(d.scutire.calitate, width: 4cm) conform documentelor anexate #blank(d.scutire.documente, width: 6cm).
 ]
+
+#check(d.comunicareEmail) Sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică.
 
 Anexez la prezenta declarație copii ale documentelor, certificate de conformitate cu originalul, conform art. 64 alin. (5)
 din Legea nr. 207/2015 privind Codul de procedură fiscală, cu modificările și completările ulterioare, după cum urmează:
