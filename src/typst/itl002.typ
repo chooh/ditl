@@ -1,6 +1,7 @@
 // ITL 002 (Model 2016, Anexa nr. 2) — декларация по налогу на здания юрлиц, DGITL Sector 2.
 // Текст и порядок полей — по бланку ITL002-cladiri-reziden-nerez-mixt-PJ-2021.docx.
 // Раскладка своя: сетка из 24 колонок, у каждой ячейки подпись сверху и значение под ней.
+// Согласие на e-mail — рядом с адресом почты; sediu social — отдельной строкой с подписью, как адрес для корреспонденции.
 // Приложения печатаются только заполненные.
 
 #import "common.typ": *
@@ -65,16 +66,22 @@
   field([Codul unic de identificare], c.cui, span: 6),
   field([Numărul tel./fax], c.telefon, span: 5),
   field([Adresa de poștă electronică], c.email, span: 7),
-  field([Strada], c.sediu.strada, span: 8),
-  field([Nr.], c.sediu.nr, span: 2),
+  note(span: 12)[
+    Sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică \
+    #h(1fr) DA #check(c.comunicareEmail == "da") #h(1fr) NU #check(c.comunicareEmail == "nu") #h(1fr)
+  ],
+  // Колонки адресов совпадают до «Ap.», чтобы sediu и адрес для корреспонденции читались столбцами.
+  note(span: 3, align(horizon)[Adresa sediului social]),
+  field([Strada], c.sediu.strada, span: 5),
+  field([Nr.], c.sediu.nr, span: 1),
   field([Cod poștal], c.sediu.codPostal, span: 2),
-  field([Bloc], c.sediu.bloc, span: 2),
-  field([Scara], c.sediu.scara, span: 2),
-  field([Etaj], c.sediu.etaj, span: 2),
+  field([Bloc], c.sediu.bloc, span: 1),
+  field([Scara], c.sediu.scara, span: 1),
+  field([Etaj], c.sediu.etaj, span: 1),
   field([Apartament], c.sediu.apartament, span: 2),
-  field([Localitatea], c.sediu.localitate, span: 6),
-  field([Județul/Sectorul], c.sediu.judet, span: 5),
-  field([Țara], c.sediu.tara, span: 5),
+  field([Localitatea], c.sediu.localitate, span: 3),
+  field([Județul/Sectorul], c.sediu.judet, span: 3),
+  field([Țara], c.sediu.tara, span: 2),
   note(span: 3, align(horizon)[Adresa de corespondență]),
   field([Strada], c.corespondenta.strada, span: 5),
   field([Nr], c.corespondenta.nr, span: 1),
@@ -82,12 +89,8 @@
   field([Blocul], c.corespondenta.bloc, span: 1),
   field([Scara], c.corespondenta.scara, span: 1),
   field([Etaj], c.corespondenta.etaj, span: 1),
-  field([Ap.], c.corespondenta.apartament, span: 1),
-  field([Localitate], c.corespondenta.localitate, span: 3),
-  note(span: 6)[
-    Sunt de acord ca actele administrative fiscale să-mi fie comunicate exclusiv la adresa de poștă electronică \
-    #h(1fr) DA #check(c.comunicareEmail == "da") #h(1fr) NU #check(c.comunicareEmail == "nu") #h(1fr)
-  ],
+  field([Ap.], c.corespondenta.apartament, span: 2),
+  field([Localitate], c.corespondenta.localitate, span: 8),
 
   // ── II. Împuternicit ──
   section[

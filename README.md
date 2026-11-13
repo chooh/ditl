@@ -216,6 +216,9 @@ node scripts/siruta.ts siruta_s1_2026.csv   # CSV с data.gov.ro → src/address
   împuternicit; у законного представителя раздел пустой. В ITL 004 подписант —
   «Subsemnatul…», а если не указан Director P.J., под подписью печатается он же.
 - Телефон и факс фирмы в ITL 002 — в одной графе «Numărul tel./fax».
+- В ITL 002 согласие «Sunt de acord… exclusiv la adresa de poștă electronică» (DA/NU) стоит в одной строке
+  с телефоном и e-mail фирмы, а ниже — две строки адресов с подписями: «Adresa sediului social»
+  и «Adresa de corespondență».
 - Адрес объекта: в графе «Localitate/sector» ITL 002 — «București, Sector 2»; в пунктах
   участков ITL 004 — строкой, как в шапке (см. ниже): «un teren situat în municipiul
   București, sectorul 2, Șos. Mihai Bravu nr. 200». Județ у объекта не спрашивается, поэтому
