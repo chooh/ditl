@@ -75,6 +75,18 @@ describe('dossierSchema', () => {
     expect(issuePaths(withNumber('40/1234/2006'))).toEqual(['company.tradeRegister.number'])
   })
 
+  it('этаж — номер, P (parter), M (mansardă), D (demisol) или SS N (subsol N)', () => {
+    const withFloor = (floor: string) => ({ ...sample, property: { ...p, address: { ...p.address, floor } } })
+    expect(dossierSchema.parse(withFloor('parter')).property.address.floor).toBe('P')
+    expect(dossierSchema.parse(withFloor('ss2')).property.address.floor).toBe('SS 2')
+    expect(issuePaths(withFloor('12'))).toEqual([])
+    expect(issuePaths(withFloor('M'))).toEqual([])
+    expect(issuePaths(withFloor('d'))).toEqual([])
+    expect(issuePaths(withFloor(''))).toEqual([])
+    expect(issuePaths(withFloor('X'))).toEqual(['property.address.floor'])
+    expect(issuePaths({ ...sample, company: { ...sample.company, seat: { ...sample.company.seat, floor: 'pod' } } })).toEqual(['company.seat.floor'])
+  })
+
   it('CNP обязателен для împuternicit, для законного представителя — нет', () => {
     expect(issuePaths(withSignatory({ personalId: '' }))).toEqual(['signatory.personalId'])
     expect(issuePaths(withSignatory({ role: 'representative', personalId: '' }))).toEqual([])

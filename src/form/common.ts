@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeRomanian, parseMoney, stripCui } from './validators'
+import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeFloor, normalizeRomanian, parseMoney, stripCui } from './validators'
 
 // Стандартные сообщения Zod — на румынском.
 z.config(z.locales.ro())
@@ -67,6 +67,12 @@ export const choice = <T extends string>(values: readonly T[], message: string) 
     .refine((v) => (values as readonly string[]).includes(v), message)
     .transform((v) => v as T)
 
+/** Этаж: номер, «P» — parter, «M» — mansardă, «D» — demisol, «SS» или «SS 2» — subsol. */
+export const floor = z
+  .string()
+  .transform(normalizeFloor)
+  .refine((s) => s === '' || /^(\d{1,3}|P|M|D|SS( \d{1,2})?)$/.test(s), 'Etaj invalid: un număr, P (parter), M (mansardă), D (demisol) sau SS 1 (subsol 1)')
+
 export const cui = z
   .string()
   .transform(stripCui)
@@ -112,7 +118,7 @@ export const address = z
     postalCode: text(10), // cod poștal
     block: text(10), // bloc
     entrance: text(10), // scara
-    floor: text(5), // etaj
+    floor, // etaj
     apartment: text(10), // apartament
     county: text(40), // județul; у Бухареста — București
     locality: text(60), // municipiul / orașul / comuna

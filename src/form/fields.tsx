@@ -108,6 +108,8 @@ const ADDRESS_FIELDS = {
 
 /** Пояснение к графе «Satul / sectorul» — у всех адресов одинаковое. */
 export const DISTRICT_TIP = 'În București — sectorul, de exemplu „Sector 2”; la sat — numele satului; la oraș sau municipiu rămâne gol.'
+/** Пояснение к графе «Etaj». */
+export const FLOOR_TIP = 'Numărul etajului; la parter — „P”, la mansardă — „M”, la demisol — „D”, la subsol — „SS 1”, „SS 2” etc.'
 export type AddressField = keyof typeof ADDRESS_FIELDS
 
 /**
@@ -139,7 +141,7 @@ export function AddressFields({
               wide={key === 'street'}
               autoComplete={token ? `section-${section} ${token}` : 'off'}
               inputMode={key === 'postalCode' ? 'numeric' : undefined}
-              tip={key === 'district' ? DISTRICT_TIP : undefined}
+              tip={key === 'district' ? DISTRICT_TIP : key === 'floor' ? FLOOR_TIP : undefined}
             />
           </Fragment>
         )

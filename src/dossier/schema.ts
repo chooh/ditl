@@ -12,6 +12,7 @@ import {
   email,
   emptyAddress,
   emptyAttachments,
+  floor,
   iban,
   isoDate,
   money,
@@ -125,7 +126,7 @@ const propertyAddress = z.object({
   number: text(10), // nr.
   block: text(10), // bloc
   entrance: text(10), // scara
-  floor: text(5), // etaj
+  floor, // etaj
   apartment: text(10), // ap.
   locality: text(60), // comuna / orașul / municipiul
   district: text(40), // satul / sectorul

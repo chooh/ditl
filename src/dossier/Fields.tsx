@@ -2,7 +2,7 @@ import { Accordion, AccordionItem, Button, RadioButton, RadioButtonGroup } from 
 import { Fragment, useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { LocalityPicker } from '../address/LocalityPicker'
-import { AddressFields, AttachmentsFields, DISTRICT_TIP, ErrorText, RadioGroup, TextField } from '../form/fields'
+import { AddressFields, AttachmentsFields, DISTRICT_TIP, ErrorText, FLOOR_TIP, RadioGroup, TextField } from '../form/fields'
 import { Section, SubStep, useSections } from '../form/sections'
 import { allowedUses, fullName, VALUE_SOURCES, type DossierInput, type LandCategory, type Use, type ValueSource } from './schema'
 
@@ -256,7 +256,7 @@ function PropertySection() {
           <TextField name="property.address.number" label="Nr." autoComplete="off" />
           <TextField name="property.address.block" label="Bloc" autoComplete="off" />
           <TextField name="property.address.entrance" label="Scara" autoComplete="off" />
-          <TextField name="property.address.floor" label="Etaj" autoComplete="off" />
+          <TextField name="property.address.floor" label="Etaj" autoComplete="off" tip={FLOOR_TIP} />
           <TextField name="property.address.apartment" label="Ap." autoComplete="off" />
           <LocalityPicker prefix="property.address" withCounty={false} />
           <TextField name="property.address.locality" label="Municipiul / orașul / comuna" autoComplete="off" />

@@ -7,6 +7,19 @@ export function normalizeRomanian(s: string): string {
   return s.normalize('NFC').replace(/[şŞţŢ]/g, (c) => ({ ş: 'ș', Ş: 'Ș', ţ: 'ț', Ţ: 'Ț' })[c]!)
 }
 
+/**
+ * Этаж: «parter» → «P», «mansardă» → «M», «demisol» → «D», «subsol 2», «ss2» → «SS 2»;
+ * остальное — без пробелов по краям, заглавными.
+ */
+export function normalizeFloor(s: string): string {
+  const t = s.normalize('NFC').trim().toUpperCase()
+  const word = ({ PARTER: 'P', MANSARDĂ: 'M', MANSARDA: 'M', DEMISOL: 'D' } as Record<string, string>)[t]
+  if (word) return word
+  const basement = /^(?:SS|SUBSOL(?:UL)?)\s*(\d*)$/.exec(t)
+  if (basement) return basement[1] ? `SS ${basement[1]}` : 'SS'
+  return t
+}
+
 /** CUI/CIF юрлица: 2–10 цифр, последняя — контрольная (ключ 753217532). */
 export function isValidCui(digits: string): boolean {
   if (!/^\d{2,10}$/.test(digits)) return false

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeRomanian, parseMoney, stripCui } from './validators'
+import { isValidCnp, isValidCui, isValidIban, looseEquals, normalizeFloor, normalizeRomanian, parseMoney, stripCui } from './validators'
 
 describe('isValidCui', () => {
   it('принимает корректные CUI', () => {
@@ -42,6 +42,24 @@ describe('parseMoney', () => {
 describe('normalizeRomanian', () => {
   it('заменяет седиль на запятую снизу', () => expect(normalizeRomanian('Ştefan Ţurcanu')).toBe('Ștefan Țurcanu'))
   it('приводит к NFC', () => expect(normalizeRomanian('Răzvan')).toBe('Răzvan'))
+})
+
+describe('normalizeFloor', () => {
+  it.each([
+    [' 3 ', '3'],
+    ['p', 'P'],
+    ['Parter', 'P'],
+    ['m', 'M'],
+    ['Mansardă', 'M'],
+    ['mansarda', 'M'],
+    ['Mansarda\u0306', 'M'], // ă как на macOS: a + бреве
+    ['Demisol', 'D'],
+    ['ss', 'SS'],
+    ['ss2', 'SS 2'],
+    ['SS 1', 'SS 1'],
+    ['subsol 2', 'SS 2'],
+    ['Subsolul 1', 'SS 1'],
+  ])('%s → %s', (input, expected) => expect(normalizeFloor(input)).toBe(expected))
 })
 
 describe('looseEquals', () => {
