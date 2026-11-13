@@ -47,7 +47,7 @@ describe('хранилище черновиков', () => {
     expect(values.company).not.toHaveProperty('removed')
     expect(values.signatory.role).toBe('')
     expect(values.attachments).toEqual([{ name: 'Contract' }, { name: '' }])
-    expect(values.properties).toEqual(defaults.properties)
+    expect(values.property).toEqual(defaults.property)
   })
 
   it('пустая форма — пустая при любой дате декларации', () => {
@@ -55,10 +55,8 @@ describe('хранилище черновиков', () => {
     expect(isBlank({ ...emptyDossier(), director: 'Ion Popescu' })).toBe(false)
   })
 
-  it('название — фирма и адреса объектов без повторов', () => {
-    expect(draftTitle({ values: sampleDossier() })).toBe(
-      'Exemplu Construcții Țărănești S.R.L. · Șos. Mihai Bravu 200, București · Str. Fabrica de Glucoză 11, București',
-    )
+  it('название — фирма и адрес объекта до квартиры', () => {
+    expect(draftTitle({ values: sampleDossier() })).toBe('Exemplu Construcții Țărănești S.R.L. · Șos. Mihai Bravu nr. 200, bl. P1, sc. B, et. 5, ap. 18')
     expect(draftTitle({ values: emptyDossier() })).toBe('Contribuabil necompletat')
   })
 })

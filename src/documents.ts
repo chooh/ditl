@@ -9,7 +9,7 @@ export type DocumentSpec = {
   template: TemplateId
   /** Название бланка: «Declarație fiscală ITL 002». */
   title: string
-  /** Какой это документ среди остальных: «ITL 002 — Șos. Mihai Bravu nr. 200, ap. 18». */
+  /** Какой это документ: «ITL 002 — clădirea, Șos. Mihai Bravu nr. 200, ap. 18». */
   label: string
   /** Имя файла без расширения. */
   filename: string
@@ -17,25 +17,23 @@ export type DocumentSpec = {
   data: unknown
 }
 
-/** ITL 002 на каждый объект и одна ITL 004 на землю под всеми объектами; `localities` — справочник SIRUTA. */
+/** ITL 002 на здание и ITL 004 на землю под ним; `localities` — справочник SIRUTA. */
 export function documentsFor(d: Dossier, localities: Locality[]): DocumentSpec[] {
   const cui = d.company.uniqueId
-  const buildings = d.properties.map(
-    (p, i): DocumentSpec => ({
+  return [
+    {
       template: 'itl002',
       title: 'Declarație fiscală ITL 002',
-      label: `ITL 002 — ${unitAddress(p)}`,
-      filename: d.properties.length === 1 ? `ITL002_${cui}` : `ITL002_${cui}_${i + 1}`,
-      data: print002(d, i),
-    }),
-  )
-  const n = d.properties.length
-  const land: DocumentSpec = {
-    template: 'itl004',
-    title: 'Declarație fiscală ITL 004',
-    label: `ITL 004 — teren, ${n === 1 ? '1 imobil' : `${n} imobile`}`,
-    filename: `ITL004_${cui}`,
-    data: print004(d, localities),
-  }
-  return [...buildings, land]
+      label: `ITL 002 — clădirea, ${unitAddress(d.property)}`,
+      filename: `ITL002_${cui}`,
+      data: print002(d),
+    },
+    {
+      template: 'itl004',
+      title: 'Declarație fiscală ITL 004',
+      label: `ITL 004 — terenul, ${unitAddress(d.property)}`,
+      filename: `ITL004_${cui}`,
+      data: print004(d, localities),
+    },
+  ]
 }

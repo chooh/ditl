@@ -157,8 +157,8 @@ function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout:
         <div>
           <h1 className="page-title">Declarații fiscale ITL 002 și ITL 004</h1>
           <p className="lead editor-lead">
-            Pentru stabilirea impozitului pe clădirile și pe terenul persoanelor juridice: o declarație ITL 002 pentru fiecare imobil și o
-            declarație ITL 004 pentru terenul aferent tuturor imobilelor.{' '}
+            Pentru stabilirea impozitului pe clădiri și pe teren al persoanelor juridice: pentru un imobil — o declarație ITL 002 pentru
+            clădire și o declarație ITL 004 pentru terenul aferent.{' '}
             <Link href="./" inline onClick={(e: MouseEvent) => (e.preventDefault(), onAbout())}>
               Cum funcționează și ce trebuie pregătit
             </Link>
@@ -195,7 +195,7 @@ function Editor({ session, onSwitch, onAbout, hidden }: EditorProps & { onAbout:
   )
 }
 
-/** Пути полей с ошибками: «properties.1.address.street», «deeds» (ошибка всего списка). */
+/** Пути полей с ошибками: «property.address.street», «property.land.areas» (ошибка всей группы). */
 function errorPaths(errors: FieldErrors, prefix = ''): string[] {
   return Object.entries(errors).flatMap(([key, value]) => {
     const path = prefix ? `${prefix}.${key}` : key

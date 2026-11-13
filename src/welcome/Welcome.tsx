@@ -25,13 +25,13 @@ export function setOnboarded() {
 const STEPS = [
   { title: 'Completați', text: '7 etape scurte, împărțite în subetape, cu sfaturi la fiecare ecran.' },
   { title: 'Verificați', text: 'Aplicația verifică CUI-ul, CNP-ul, IBAN-ul, datele și câmpurile obligatorii.' },
-  { title: 'Descărcați', text: 'O declarație ITL 002 pentru fiecare imobil și una ITL 004 pentru teren — în PDF.' },
+  { title: 'Descărcați', text: 'Declarația ITL 002 pentru clădire și ITL 004 pentru teren — în PDF.' },
 ]
 
 const CHECKLIST = [
   'Certificatul de înregistrare ONRC al firmei (CUI, nr. de înregistrare)',
   'Actul de identitate al persoanei care semnează',
-  'Contractele de dobândire a imobilelor',
+  'Contractul de dobândire a imobilului',
   'Documentul cu valoarea clădirii: raport de evaluare, contract sau evidența contabilă',
   'Datele terenului: cota-parte și suprafața (din contract sau extrasul de carte funciară)',
 ]
@@ -59,8 +59,8 @@ export function Welcome({ returning, onStart, onSample }: WelcomeProps) {
           Declarațiile ITL 002 și ITL 004, pas cu pas
         </h1>
         <p className="lead">
-          Introduceți o singură dată datele firmei și ale imobilelor — aplicația pregătește declarațiile pentru clădiri și teren, gata
-          de tipărit și semnat.
+          Introduceți datele firmei și ale imobilului — aplicația pregătește declarațiile pentru clădire și teren, gata de tipărit și
+          semnat. Pentru următorul imobil al firmei, datele firmei se preiau automat.
         </p>
         <div className="welcome-actions">
           <Button size="lg" renderIcon={ArrowRight} onClick={onStart}>

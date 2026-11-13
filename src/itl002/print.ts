@@ -1,7 +1,7 @@
 import { acquiredOn, allowedUses, VALUE_SOURCES, type AcquisitionForm, type Dossier, type Use, type ValueSource } from '../dossier/schema'
 import type { Address } from '../form/common'
 import { formatDate, formatMoney, sectorNumber } from '../pdf/format'
-import { attachmentsOf, countyOrSector, deedOf, fullLocality, localityLine } from '../print/common'
+import { countyOrSector, fullLocality, localityLine } from '../print/common'
 
 /** Варианты «Forma de dobândire» бланка — ключи шаблона. */
 const FORM: Record<AcquisitionForm, string> = {
@@ -29,13 +29,11 @@ export const roAddress = (a: Address) => ({
 })
 
 /**
- * Данные для шаблона src/typst/itl002.typ — декларация на объект `index` досье;
+ * Данные для шаблона src/typst/itl002.typ — декларация на здание досье;
  * всё уже строками в печатном виде. Форма данных — как в src/typst/samples/itl002.json.
  */
-export function toPrintData(d: Dossier, index: number) {
-  const p = d.properties[index]!
-  const deed = deedOf(d, p)
-  const { company: c, signatory: s } = d
+export function toPrintData(d: Dossier) {
+  const { company: c, signatory: s, deed, property: p } = d
   const b = p.building
   const uses = allowedUses(b.type)
   // Колонки, не относящиеся к типу здания, печатаются пустыми.
@@ -91,7 +89,7 @@ export function toPrintData(d: Dossier, index: number) {
       },
       indicatori: Object.fromEntries(VALUE_SOURCES.map((col) => [col, { rez: cell(col, 'residential'), nerez: cell(col, 'nonResidential') }])),
     },
-    anexe: attachmentsOf(d.attachments, deed.attachments, p.attachments),
+    anexe: d.attachments,
     actIdentitate: {
       tip: s.idDocument.type,
       serie: s.idDocument.series,

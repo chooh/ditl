@@ -19,18 +19,19 @@ export const HELP = {
     title: 'Cum funcționează',
     short: 'Completați dosarul pas cu pas, apoi descărcați declarațiile gata de semnat.',
     intro:
-      'Aplicația vă conduce prin 7 etape scurte. Din datele introduse o singură dată se generează o declarație ITL 002 pentru fiecare imobil și o declarație ITL 004 pentru terenul aferent tuturor imobilelor.',
+      'Aplicația vă conduce prin 7 etape scurte. Un dosar înseamnă un imobil: din datele lui se generează declarația ITL 002 pentru clădire și declarația ITL 004 pentru terenul aferent.',
     tips: [
       'Butonul „Ajutor” din colțul de sus deschide oricând sfaturile pentru ecranul pe care vă aflați.',
       'Lângă câmpurile mai dificile există un „i” — apăsați-l pentru o explicație scurtă.',
       'Progresul se salvează automat în acest browser; puteți închide pagina și reveni oricând.',
+      'Pentru următorul imobil, „Dosar nou pentru această firmă” preia datele firmei și ale semnatarului, iar „… și contractul” — și actul de dobândire, cu adresa clădirii.',
       'Etapele pot fi completate în orice ordine — indicatorul arată ce mai este de completat.',
     ],
   },
   'company.identity': {
     title: 'Datele de identificare ale firmei',
     short: 'Copiați datele exact cum apar în certificatul de înregistrare ONRC.',
-    intro: 'Firma care deține sau folosește imobilele — contribuabilul care depune declarațiile.',
+    intro: 'Firma care deține sau folosește imobilul — contribuabilul care depune declarațiile.',
     where: ['Certificatul de înregistrare eliberat de Registrul Comerțului (ONRC)', 'Căutarea după CUI pe site-ul ANAF sau pe portalul ONRC'],
     tips: [
       'CUI-ul are între 2 și 10 cifre; ultima este cifra de control — aplicația o verifică.',
@@ -97,29 +98,19 @@ export const HELP = {
   },
   deed: {
     title: 'Actul de dobândire',
-    short: 'Contractul prin care firma a dobândit imobilele — numărul și data se copiază din act.',
-    intro:
-      'Contractul de vânzare-cumpărare, de închiriere, de concesiune sau alt act prin care firma a obținut imobilele. Un singur act poate cuprinde mai multe imobile — de exemplu, un apartament și un loc de parcare.',
+    short: 'Contractul prin care firma a dobândit imobilul — numărul și data se copiază din act.',
+    intro: 'Contractul de vânzare-cumpărare, de închiriere, de concesiune sau alt act prin care firma a obținut imobilul.',
     where: ['Contractul autentificat de notar', 'Extrasul de carte funciară', 'Contractul de închiriere, concesiune sau administrare'],
     tips: [
       'Completați „Data dobândirii” doar dacă diferă de data actului (de exemplu, la o predare-primire ulterioară).',
-      'La documentele anexate scrieți copiile pe care le atașați pentru acest act, de exemplu „Contract de vânzare-cumpărare nr. 1234/2023”.',
-    ],
-  },
-  'deeds.list': {
-    title: 'Lista actelor',
-    short: 'Verificați actele. Dacă imobilele au fost dobândite prin mai multe acte, adăugați-le pe toate.',
-    tips: [
-      'La fiecare imobil veți alege actul prin care a fost dobândit.',
-      'Un act folosit de un imobil nu poate fi șters — mai întâi schimbați actul la imobil.',
+      'Contractul cuprinde mai multe imobile — de exemplu, un apartament și un loc de parcare? Completați dosarul pentru primul, apoi „Dosar nou pentru această firmă și contractul” pentru următorul.',
     ],
   },
   'property.address': {
-    title: 'Actul și adresa imobilului',
-    short: 'Alegeți actul de dobândire și introduceți adresa clădirii.',
+    title: 'Adresa imobilului',
+    short: 'Adresa clădirii, ca în contract sau în extrasul de carte funciară.',
     tips: [
-      'Pentru fiecare imobil se generează o declarație ITL 002 separată.',
-      'Apartamentul și locul de parcare din același bloc sunt imobile separate — adăugați-le pe rând.',
+      'Apartamentul și locul de parcare din același bloc sunt imobile separate — fiecare are propriul dosar și propriile declarații.',
       'Căutați localitatea în lista SIRUTA: pentru București alegeți sectorul, de exemplu „București, Sector 2” — aplicația îl tipărește corect în ambele declarații.',
     ],
   },
@@ -150,7 +141,7 @@ export const HELP = {
   },
   'property.land': {
     title: 'Terenul aferent',
-    short: 'Terenul de sub clădire intră în declarația ITL 004, comună pentru toate imobilele.',
+    short: 'Terenul de sub clădire — pentru declarația ITL 004.',
     where: ['Contractul de dobândire (cota-parte din teren)', 'Extrasul de carte funciară (suprafața)'],
     tips: [
       'La un apartament, birou sau loc de parcare, firma deține de obicei o cotă-parte din teren — de exemplu 12,50/1000.',
@@ -160,22 +151,6 @@ export const HELP = {
       'Pentru apartamente și birouri se completează de regulă doar „Terenuri cu construcții”.',
     ],
   },
-  'property.annex': {
-    title: 'Documentele imobilului',
-    short: 'Documentele care privesc doar acest imobil — de exemplu, raportul de evaluare.',
-    tips: [
-      'Documentele comune tuturor declarațiilor (certificatul ONRC, împuternicirea) se adaugă la etapa „Anexe”.',
-      'Puteți lăsa lista goală.',
-    ],
-  },
-  'properties.list': {
-    title: 'Lista imobilelor',
-    short: 'Adăugați câte un imobil pentru fiecare clădire sau unitate: apartament, birou, loc de parcare.',
-    tips: [
-      'Imobilul nou preia actul și adresa de la imobilul anterior — modificați doar ce diferă.',
-      'Pentru fiecare imobil se va genera o declarație ITL 002.',
-    ],
-  },
   exemption: {
     title: 'Scutiri la impozitul pe teren',
     short: 'Majoritatea firmelor nu beneficiază de scutiri — în acest caz răspundeți „Nu”.',
@@ -183,12 +158,9 @@ export const HELP = {
       'Completați doar dacă firma beneficiază de scutire sau reducere la impozitul pe teren, pe baza unor documente pe care le anexați.',
   },
   attachments: {
-    title: 'Documente comune',
-    short: 'Documentele anexate la fiecare declarație — de exemplu, certificatul ONRC sau împuternicirea.',
-    tips: [
-      'Copiile se certifică „conform cu originalul” (art. 64 alin. (5) din Legea nr. 207/2015).',
-      'Documentele unui act sau ale unui imobil se adaugă la actul, respectiv la imobilul respectiv.',
-    ],
+    title: 'Documente anexate',
+    short: 'Documentele anexate la ambele declarații — contractul, extrasul de carte funciară, certificatul ONRC, împuternicirea.',
+    tips: ['Copiile se certifică „conform cu originalul” (art. 64 alin. (5) din Legea nr. 207/2015).', 'Puteți lăsa lista goală.'],
   },
   signatures: {
     title: 'Data și semnături',
@@ -204,14 +176,14 @@ export const HELP = {
     short: 'Verificați fiecare secțiune, apoi generați documentele.',
     tips: [
       'Secțiunile marcate cu roșu au câmpuri de corectat — apăsați creionul pentru a le modifica.',
-      'Veți primi câte o declarație ITL 002 pentru fiecare imobil și o declarație ITL 004 pentru teren.',
+      'Veți primi declarația ITL 002 pentru clădire și declarația ITL 004 pentru teren.',
     ],
   },
   result: {
     title: 'Ce urmează',
     short: 'Descărcați PDF-urile, semnați-le și depuneți-le la DGITL Sector 2.',
     tips: [
-      '1. Generați și descărcați PDF-ul fiecărei declarații.',
+      '1. Generați și descărcați PDF-urile celor două declarații.',
       '2. Tipăriți, semnați și ștampilați declarațiile.',
       '3. Atașați copiile documentelor enumerate la „Anexe”.',
       '4. Depuneți dosarul la DGITL Sector 2 — la ghișeu sau prin canalele online ale instituției.',

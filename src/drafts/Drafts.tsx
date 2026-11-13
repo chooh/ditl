@@ -2,7 +2,7 @@ import { Button, ContainedList, ContainedListItem, InlineNotification } from '@c
 import { Add, ChevronDown, ChevronUp, Copy, TrashCan } from '@carbon/icons-react'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useFormContext } from 'react-hook-form'
-import { forSameCompany, type DossierInput } from '../dossier/schema'
+import { forSameCompany, forSameDeed, type DossierInput } from '../dossier/schema'
 import { useSections } from '../form/sections'
 import { deleteDraft, draftTitle, isBlank, listDrafts, loadDraft, saveDraft, setActiveDraft, STORAGE_KEY, type Draft } from './storage'
 
@@ -24,8 +24,10 @@ export type Session = {
   confirmed?: string[]
 }
 
-/** Разделы, которые «Dosar nou pentru aceeași firmă» переносит целиком. */
+/** Разделы, которые «Dosar nou pentru această firmă» переносит целиком. */
 const SAME_COMPANY_SECTIONS = ['company', 'signatory']
+/** «…și contractul» — ещё и акт; у объекта переносится только адрес дома, раздел не готов. */
+const SAME_DEED_SECTIONS = [...SAME_COMPANY_SECTIONS, 'deed']
 
 /** Что сохраняется в черновик: по этому снимку видно, есть ли несохранённые изменения. */
 const snapshot = (values: DossierInput, confirmed: string[]) => JSON.stringify({ values, confirmed })
@@ -120,11 +122,18 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     onSwitch({ initial, confirmed })
   }
 
-  /** Новое досье той же фирмы: реквизиты и подписант переносятся, акты и объекты — нет. */
+  /** Новое досье той же фирмы: реквизиты и подписант переносятся, акт и объект — нет. */
   const startForSameCompany = () =>
     startNew(
       forSameCompany(getValues()),
       sections.confirmed.filter((id) => SAME_COMPANY_SECTIONS.includes(id)),
+    )
+
+  /** Следующий объект по тому же договору: ещё и акт, и адрес дома. */
+  const startForSameDeed = () =>
+    startNew(
+      forSameDeed(getValues()),
+      sections.confirmed.filter((id) => SAME_DEED_SECTIONS.includes(id)),
     )
 
   const remove = (id: string) => {
@@ -152,6 +161,7 @@ export function useDrafts(session: Session, onSwitch: (next: Session) => void) {
     open,
     startNew,
     startForSameCompany,
+    startForSameDeed,
     remove,
   }
 }
@@ -195,7 +205,10 @@ export function DraftsPanel({ drafts }: { drafts: DraftsApi }) {
           Dosar nou
         </Button>
         <Button kind="tertiary" size="md" renderIcon={Copy} disabled={!hasContent} onClick={() => drafts.startForSameCompany()}>
-          Dosar nou pentru aceeași firmă
+          Dosar nou pentru această firmă
+        </Button>
+        <Button kind="tertiary" size="md" renderIcon={Copy} disabled={!hasContent} onClick={() => drafts.startForSameDeed()}>
+          Dosar nou pentru această firmă și contractul
         </Button>
         <Button
           kind="ghost"

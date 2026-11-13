@@ -5,7 +5,7 @@ import type { FieldPath } from '../form/fields'
 import { looseEquals } from '../form/validators'
 import { BUCHAREST, findLocalities, loadLocalities, searchLocalities, type Locality } from './siruta'
 
-export type AddressPrefix = 'company.seat' | 'company.correspondence' | 'signatory.address' | `properties.${number}.address`
+export type AddressPrefix = 'company.seat' | 'company.correspondence' | 'signatory.address' | 'property.address'
 
 function useLocalities(): Locality[] | undefined {
   const [all, setAll] = useState<Locality[]>()

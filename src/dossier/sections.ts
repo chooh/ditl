@@ -9,23 +9,6 @@ const attachmentCount = (list: { name: string }[]) => list.filter((a) => a.name.
 
 const ROLE = { representative: 'reprezentant legal', proxy: 'împuternicit' } as Record<string, string>
 
-/** Подэтап акта. */
-export const deedStep = (i: number) => `deed-${i}`
-
-/** Части объекта — по подэтапу на каждую. */
-const PROPERTY_PARTS = [
-  { part: 'address', title: 'actul și adresa', step: 'Act și adresă', fields: ['deedId', 'address'], help: 'property.address' },
-  { part: 'building', title: 'clădirea', step: 'Clădirea', fields: ['building.type', 'building.purchaseValue'], help: 'property.building' },
-  { part: 'values', title: 'valoarea clădirii', step: 'Valoarea', fields: ['building.values'], help: 'property.values' },
-  { part: 'land', title: 'terenul', step: 'Terenul', fields: ['land'], help: 'property.land' },
-  { part: 'annex', title: 'documente anexate', step: 'Anexe', fields: ['attachments'], help: 'property.annex' },
-] as const satisfies readonly { part: string; title: string; step: string; fields: readonly string[]; help: HelpTopic }[]
-
-export type PropertyPart = (typeof PROPERTY_PARTS)[number]['part']
-
-/** Подэтап части объекта. */
-export const propertyStep = (i: number, part: PropertyPart) => `property-${i}-${part}`
-
 /** Раздел из одного подэтапа. */
 const single = (id: string, title: string, fields: readonly string[], help: HelpTopic): (() => SubStepDef[]) => () => [{ id, title, fields, help }]
 
@@ -75,36 +58,24 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
     ],
   },
   {
-    id: 'deeds',
-    title: 'Actele de dobândire',
-    step: 'Acte',
-    keys: ['deeds'],
-    summary: ({ deeds }) => join(count(deeds.length, 'act', 'acte'), ...deeds.map((d) => d.number && `nr. ${d.number}${d.date ? ` din ${formatDate(d.date)}` : ''}`)),
-    // По подэтапу на акт и список актов; ошибка «нет ни одного акта» — у списка.
-    subSteps: ({ deeds }) => [
-      ...deeds.map((_, i) => ({ id: deedStep(i), title: `Actul ${i + 1}`, fields: [`deeds.${i}`], help: 'deed' as const })),
-      { id: 'deeds-list', title: 'Lista actelor', step: 'Lista', fields: [], exact: ['deeds'], help: 'deeds.list' },
-    ],
+    id: 'deed',
+    title: 'Actul de dobândire',
+    step: 'Act',
+    keys: ['deed'],
+    summary: ({ deed: d }) => (d.number ? `nr. ${d.number}${d.date ? ` din ${formatDate(d.date)}` : ''}` : ''),
+    subSteps: single('deed', 'Actul de dobândire', ['deed'], 'deed'),
   },
   {
-    id: 'properties',
-    title: 'Imobilele: clădire și teren',
-    step: 'Imobile',
-    keys: ['properties'],
-    summary: ({ properties }) => join(count(properties.length, 'imobil', 'imobile'), ...properties.map(unitAddress)),
-    subSteps: ({ properties }) => [
-      ...properties.flatMap((_, i) =>
-        PROPERTY_PARTS.map(({ part, title, step, fields, help }) => ({
-          id: propertyStep(i, part),
-          title: `Imobilul ${i + 1} — ${title}`,
-          step,
-          // В индикаторе — части одного объекта и список.
-          group: `property-${i}`,
-          fields: fields.map((f) => `properties.${i}.${f}`),
-          help,
-        })),
-      ),
-      { id: 'properties-list', title: 'Lista imobilelor', step: 'Lista', fields: [], exact: ['properties'], help: 'properties.list' },
+    id: 'property',
+    title: 'Imobilul: clădire și teren',
+    step: 'Imobil',
+    keys: ['property'],
+    summary: ({ property: p }) => join(unitAddress(p), p.address.locality),
+    subSteps: () => [
+      { id: 'address', title: 'Adresa', fields: ['property.address'], help: 'property.address' },
+      { id: 'building', title: 'Clădirea', fields: ['property.building.type', 'property.building.purchaseValue'], help: 'property.building' },
+      { id: 'values', title: 'Valoarea clădirii', step: 'Valoarea', fields: ['property.building.values'], help: 'property.values' },
+      { id: 'land', title: 'Terenul', fields: ['property.land'], help: 'property.land' },
     ],
   },
   {
@@ -117,14 +88,14 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
   },
   {
     id: 'attachments',
-    title: 'Documente anexate la toate declarațiile',
+    title: 'Documente anexate',
     step: 'Anexe',
     keys: ['attachments'],
     summary: ({ attachments }) => {
       const n = attachmentCount(attachments)
       return n === 0 ? 'Niciun document' : count(n, 'document', 'documente')
     },
-    subSteps: single('attachments', 'Anexe comune', ['attachments'], 'attachments'),
+    subSteps: single('attachments', 'Anexe', ['attachments'], 'attachments'),
   },
   {
     id: 'signatures',
@@ -136,8 +107,7 @@ export const SECTIONS: readonly SectionDef<DossierInput>[] = [
   },
 ]
 
-/** Название черновика: фирма и объекты. */
-export function dossierTitle({ company, properties }: DossierInput): string {
-  const addresses = [...new Set(properties.map((p) => [`${p.address.street} ${p.address.number}`.trim(), p.address.locality].filter(Boolean).join(', ')))]
-  return [company.name.trim() || 'Contribuabil necompletat', ...addresses.filter(Boolean)].join(' · ')
+/** Название черновика: фирма и объект — до квартиры, чтобы различать объекты одного дома. */
+export function dossierTitle({ company, property }: DossierInput): string {
+  return [company.name.trim() || 'Contribuabil necompletat', unitAddress(property)].filter(Boolean).join(' · ')
 }

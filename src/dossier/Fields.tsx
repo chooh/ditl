@@ -1,26 +1,12 @@
-import { Accordion, AccordionItem, Button, ContainedList, ContainedListItem, RadioButton, RadioButtonGroup, Select, SelectItem, Tag } from '@carbon/react'
-import { Add, TrashCan } from '@carbon/icons-react'
+import { Accordion, AccordionItem, Button, RadioButton, RadioButtonGroup } from '@carbon/react'
 import { Fragment, useState } from 'react'
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
+import { useFormContext, useWatch } from 'react-hook-form'
 import { LocalityPicker } from '../address/LocalityPicker'
 import { AddressFields, AttachmentsFields, DISTRICT_TIP, ErrorText, RadioGroup, TextField } from '../form/fields'
-import { issuesText, Section, SubStep, useSections } from '../form/sections'
-import { formatDate } from '../pdf/format'
-import {
-  allowedUses,
-  emptyDeed,
-  fullName,
-  nextProperty,
-  unitAddress,
-  VALUE_SOURCES,
-  type DossierInput,
-  type LandCategory,
-  type Use,
-  type ValueSource,
-} from './schema'
-import { deedStep, propertyStep } from './sections'
+import { Section, SubStep, useSections } from '../form/sections'
+import { allowedUses, fullName, VALUE_SOURCES, type DossierInput, type LandCategory, type Use, type ValueSource } from './schema'
 
-/** Поля досье: фирма, подписант, акты, объекты и то, что относится ко всем декларациям. */
+/** Поля досье: фирма, подписант, акт, объект и то, что относится к обеим декларациям. */
 export function Fields() {
   return (
     <>
@@ -30,11 +16,13 @@ export function Fields() {
       <Section id="signatory">
         <SignatorySection />
       </Section>
-      <Section id="deeds">
-        <DeedsSection />
+      <Section id="deed">
+        <SubStep id="deed">
+          <DeedFields />
+        </SubStep>
       </Section>
-      <Section id="properties">
-        <PropertiesSection />
+      <Section id="property">
+        <PropertySection />
       </Section>
       <Section id="exemption">
         <SubStep id="exemption">
@@ -45,10 +33,9 @@ export function Fields() {
         <SubStep id="attachments">
           <p className="hint">
             Copii ale documentelor, certificate de conformitate cu originalul (art. 64 alin. (5) din Legea nr. 207/2015), care se
-            anexează la fiecare declarație — de exemplu certificatul ONRC sau împuternicirea. Documentele unui act sau ale unui imobil
-            se adaugă la actul, respectiv la imobilul respectiv.
+            anexează la ambele declarații — de exemplu contractul, extrasul de carte funciară, certificatul ONRC sau împuternicirea.
           </p>
-          <AttachmentsFields name="attachments" label="Anexe comune" />
+          <AttachmentsFields name="attachments" label="Anexe" />
         </SubStep>
       </Section>
       <Section id="signatures">
@@ -232,250 +219,65 @@ const ACQUISITION_OPTIONS = [
   ['other', 'Alte modalități'],
 ] as const
 
-/** Номер и дата акта — для списка актов у объекта. */
-const deedLabel = (deed: DossierInput['deeds'][number], i: number) =>
-  [`Actul ${i + 1}`, deed.number && `nr. ${deed.number}`, deed.date && `din ${formatDate(deed.date)}`].filter(Boolean).join(' ')
-
-/** По экрану на акт и список актов, где их добавляют и удаляют. */
-function DeedsSection() {
-  const { control } = useFormContext<DossierInput>()
-  const { fields, append, remove } = useFieldArray({ control, name: 'deeds' })
-  const deeds = useWatch<DossierInput, 'deeds'>({ name: 'deeds' })
-  const properties = useWatch<DossierInput, 'properties'>({ name: 'properties' })
-  const sections = useSections()
-  const subs = sections.subSteps('deeds')
+function DeedFields() {
+  const form = useWatch<DossierInput, 'deed.form'>({ name: 'deed.form' })
   return (
     <>
-      {fields.map((field, i) => (
-        <SubStep key={field.id} id={deedStep(i)}>
-          <p className="hint">
-            Contractele de vânzare-cumpărare și alte acte prin care au fost dobândite imobilele. Un act poate cuprinde mai multe imobile.
-          </p>
-          <DeedFields index={i} />
-        </SubStep>
-      ))}
-
-      <SubStep id="deeds-list">
-        <ContainedList label={`Acte adăugate: ${fields.length}`} kind="on-page" className="items">
-          {fields.map((field, i) => {
-            // Акт, на который ссылаются объекты, удалить нельзя — сначала поменять акт у объектов.
-            // field.id — ключ useFieldArray, а не id акта: тот берётся из значений.
-            const deed = deeds[i]
-            const used = properties.flatMap((p, j) => (p.deedId === deed?.id ? [j + 1] : []))
-            const issues = subs.find((s) => s.id === deedStep(i))?.issues ?? 0
-            return (
-              // Строка открывает акт; удалить можно только неиспользуемый.
-              <ContainedListItem
-                key={field.id}
-                onClick={() => sections.goSub(deedStep(i))}
-                action={
-                  fields.length > 1 &&
-                  used.length === 0 && (
-                    <Button
-                      kind="ghost"
-                      hasIconOnly
-                      renderIcon={TrashCan}
-                      iconDescription={`Șterge actul ${i + 1}`}
-                      tooltipAlignment="end"
-                      onClick={() => remove(i)}
-                    />
-                  )
-                }
-              >
-                <span className="review-heading">
-                  <span className="review-title">{deed ? deedLabel(deed, i) : `Actul ${i + 1}`}</span>
-                  {issues > 0 && (
-                    <Tag type="red" size="sm">
-                      {issuesText(issues)}
-                    </Tag>
-                  )}
-                </span>
-                <span className="item-secondary">
-                  {used.length > 0
-                    ? `Folosit de imobilul ${used.join(', ')}${fields.length > 1 ? ' — nu poate fi șters' : ''}.`
-                    : 'Nu este folosit încă de niciun imobil.'}
-                </span>
-              </ContainedListItem>
-            )
-          })}
-        </ContainedList>
-        <ErrorText name="deeds" />
-        <p className="hint">Imobilele au fost dobândite prin mai multe acte? Adăugați fiecare act.</p>
-        <Button
-          kind="tertiary"
-          renderIcon={Add}
-          onClick={() => {
-            append(emptyDeed())
-            sections.goSub(deedStep(fields.length))
-          }}
-        >
-          Adaugă act
-        </Button>
-      </SubStep>
-    </>
-  )
-}
-
-function DeedFields({ index: i }: { index: number }) {
-  const p = `deeds.${i}` as const
-  const form = useWatch<DossierInput, `deeds.${number}.form`>({ name: `${p}.form` })
-  return (
-    <>
+      <p className="hint">Contractul de vânzare-cumpărare sau alt act prin care firma a dobândit imobilul.</p>
       <div className="grid">
-        <TextField name={`${p}.number`} label="Nr. act" autoComplete="off" tip="Numărul contractului sau al actului, de exemplu 1234/2023." />
-        <TextField name={`${p}.date`} label="Data actului" type="date" autoComplete="off" />
+        <TextField name="deed.number" label="Nr. act" autoComplete="off" tip="Numărul contractului sau al actului, de exemplu 1234/2023." />
+        <TextField name="deed.date" label="Data actului" type="date" autoComplete="off" />
         <TextField
-          name={`${p}.acquiredOn`}
+          name="deed.acquiredOn"
           label="Data dobândirii (dacă diferă)"
           type="date"
           autoComplete="off"
           tip="Doar dacă imobilul a fost dobândit la altă dată decât data actului. Necompletat — se folosește data actului."
         />
       </div>
-      <RadioGroup name={`${p}.form`} legend="Forma de dobândire" options={ACQUISITION_OPTIONS} />
+      <RadioGroup name="deed.form" legend="Forma de dobândire" options={ACQUISITION_OPTIONS} />
       {form === 'other' && (
         <div className="grid">
-          <TextField name={`${p}.formOther`} label="Alte modalități — precizați" wide autoComplete="off" />
+          <TextField name="deed.formOther" label="Alte modalități — precizați" wide autoComplete="off" />
         </div>
       )}
-      <h4 className="subheading">Documente anexate pentru acest act</h4>
-      <AttachmentsFields name={`${p}.attachments`} label={`Actul ${i + 1}`} />
     </>
   )
 }
 
-/** По пять экранов на объект (акт и адрес, здание, стоимость, земля, приложения) и список объектов. */
-function PropertiesSection() {
-  const { control, getValues } = useFormContext<DossierInput>()
-  const { fields, append, remove } = useFieldArray({ control, name: 'properties' })
-  const properties = useWatch<DossierInput, 'properties'>({ name: 'properties' })
-  const sections = useSections()
-  const subs = sections.subSteps('properties')
+/** Четыре экрана объекта: адрес, здание, стоимость, земля. */
+function PropertySection() {
   return (
     <>
-      {fields.map((field, i) => {
-        const p = `properties.${i}` as const
-        const label = `Imobilul ${i + 1}`
-        return (
-          <Fragment key={field.id}>
-            <SubStep id={propertyStep(i, 'address')}>
-              <p className="hint">
-                Pentru fiecare imobil se generează o declarație ITL 002 (clădirea); terenul aferent tuturor imobilelor intră într-o singură
-                declarație ITL 004.
-              </p>
-              <DeedSelect index={i} />
-              <h4 className="subheading">Adresa</h4>
-              <div className="grid">
-                <TextField name={`${p}.address.street`} label="Strada" wide autoComplete="off" />
-                <TextField name={`${p}.address.number`} label="Nr." autoComplete="off" />
-                <TextField name={`${p}.address.block`} label="Bloc" autoComplete="off" />
-                <TextField name={`${p}.address.entrance`} label="Scara" autoComplete="off" />
-                <TextField name={`${p}.address.floor`} label="Etaj" autoComplete="off" />
-                <TextField name={`${p}.address.apartment`} label="Ap." autoComplete="off" />
-                <LocalityPicker prefix={`${p}.address`} withCounty={false} />
-                <TextField name={`${p}.address.locality`} label="Municipiul / orașul / comuna" autoComplete="off" />
-                <TextField name={`${p}.address.district`} label="Satul / sectorul" autoComplete="off" tip={DISTRICT_TIP} />
-              </div>
-            </SubStep>
-            <SubStep id={propertyStep(i, 'building')}>
-              <BuildingFields index={i} />
-            </SubStep>
-            <SubStep id={propertyStep(i, 'values')}>
-              <ValueTable index={i} />
-            </SubStep>
-            <SubStep id={propertyStep(i, 'land')}>
-              <LandFields index={i} />
-            </SubStep>
-            <SubStep id={propertyStep(i, 'annex')}>
-              <AttachmentsFields name={`${p}.attachments`} label={label} />
-            </SubStep>
-          </Fragment>
-        )
-      })}
-
-      <SubStep id="properties-list">
-        <ContainedList label={`Imobile adăugate: ${fields.length}`} kind="on-page" className="items">
-          {fields.map((field, i) => {
-            const property = properties[i]
-            const issues = subs.filter((s) => s.id.startsWith(`property-${i}-`)).reduce((n, s) => n + s.issues, 0)
-            const address = property ? [unitAddress(property), property.address.locality].filter(Boolean).join(', ') : ''
-            return (
-              // Строка открывает объект.
-              <ContainedListItem
-                key={field.id}
-                onClick={() => sections.goSub(propertyStep(i, 'address'))}
-                action={
-                  fields.length > 1 && (
-                    <Button
-                      kind="ghost"
-                      hasIconOnly
-                      renderIcon={TrashCan}
-                      iconDescription={`Șterge imobilul ${i + 1}`}
-                      tooltipAlignment="end"
-                      onClick={() => remove(i)}
-                    />
-                  )
-                }
-              >
-                <span className="review-heading">
-                  <span className="review-title">Imobilul {i + 1}</span>
-                  {issues > 0 && (
-                    <Tag type="red" size="sm">
-                      {issuesText(issues)}
-                    </Tag>
-                  )}
-                </span>
-                <span className="item-secondary">{address || 'Adresa nu este completată'}</span>
-              </ContainedListItem>
-            )
-          })}
-        </ContainedList>
-        <ErrorText name="properties" />
-        <p className="hint">Imobilul nou preia actul și adresa clădirii de la imobilul anterior.</p>
-        <Button
-          kind="tertiary"
-          renderIcon={Add}
-          onClick={() => {
-            const { properties, deeds } = getValues()
-            append(nextProperty(properties.at(-1), deeds.at(-1)?.id ?? ''))
-            sections.goSub(propertyStep(fields.length, 'address'))
-          }}
-        >
-          Adaugă imobil
-        </Button>
+      <SubStep id="address">
+        <p className="hint">Din datele imobilului se generează o declarație ITL 002 (clădirea) și o declarație ITL 004 (terenul aferent).</p>
+        <div className="grid">
+          <TextField name="property.address.street" label="Strada" wide autoComplete="off" />
+          <TextField name="property.address.number" label="Nr." autoComplete="off" />
+          <TextField name="property.address.block" label="Bloc" autoComplete="off" />
+          <TextField name="property.address.entrance" label="Scara" autoComplete="off" />
+          <TextField name="property.address.floor" label="Etaj" autoComplete="off" />
+          <TextField name="property.address.apartment" label="Ap." autoComplete="off" />
+          <LocalityPicker prefix="property.address" withCounty={false} />
+          <TextField name="property.address.locality" label="Municipiul / orașul / comuna" autoComplete="off" />
+          <TextField name="property.address.district" label="Satul / sectorul" autoComplete="off" tip={DISTRICT_TIP} />
+        </div>
+      </SubStep>
+      <SubStep id="building">
+        <BuildingFields />
+      </SubStep>
+      <SubStep id="values">
+        <ValueTable />
+      </SubStep>
+      <SubStep id="land">
+        <LandFields />
       </SubStep>
     </>
   )
 }
 
-/** Акт, по которому получен объект: номер, дата и форма приобретения берутся из него. */
-function DeedSelect({ index: i }: { index: number }) {
-  const { register, getFieldState, formState } = useFormContext<DossierInput>()
-  const deeds = useWatch<DossierInput, 'deeds'>({ name: 'deeds' })
-  const name = `properties.${i}.deedId` as const
-  const error = getFieldState(name, formState).error?.message
-  const id = `deed-select-${i}`
-  return (
-    <div className="grid">
-      <Select
-        id={id}
-        className="wide"
-        labelText="Dobândit prin"
-        helperText="Actul de la etapa „Acte”, prin care firma a dobândit acest imobil."
-        {...register(name)}
-        invalid={!!error}
-        invalidText={error}
-      >
-        {deeds.map((deed, j) => (
-          <SelectItem key={deed.id} value={deed.id} text={deedLabel(deed, j)} />
-        ))}
-      </Select>
-    </div>
-  )
-}
-
-function BuildingFields({ index: i }: { index: number }) {
-  const p = `properties.${i}.building` as const
+function BuildingFields() {
+  const p = 'property.building'
   return (
     <>
       <RadioGroup
@@ -512,15 +314,15 @@ const VALUE_LABELS: Record<ValueSource, string> = {
 const USE_LABELS: Record<Use, string> = { residential: 'Rezidențial', nonResidential: 'Nerezidențial' }
 
 /** Таблица «Indicator»: показываются только колонки, относящиеся к выбранному типу здания. */
-function ValueTable({ index: i }: { index: number }) {
-  const type = useWatch<DossierInput, `properties.${number}.building.type`>({ name: `properties.${i}.building.type` })
+function ValueTable() {
+  const type = useWatch<DossierInput, 'property.building.type'>({ name: 'property.building.type' })
   const sections = useSections()
   const uses = allowedUses(type)
   if (uses.length === 0) {
     return (
       <div>
         <p className="hint">Alegeți mai întâi tipul clădirii — de el depind valorile care se declară.</p>
-        <Button kind="tertiary" size="md" onClick={() => sections.goSub(propertyStep(i, 'building'))}>
+        <Button kind="tertiary" size="md" onClick={() => sections.goSub('building')}>
           Alege tipul clădirii
         </Button>
       </div>
@@ -536,7 +338,7 @@ function ValueTable({ index: i }: { index: number }) {
           <div className="grid">
             {uses.map((use) => {
               const suffix = uses.length > 1 ? ` — ${USE_LABELS[use].toLowerCase()}` : ''
-              const cell = `properties.${i}.building.values.${col}.${use}` as const
+              const cell = `property.building.values.${col}.${use}` as const
               return (
                 <Fragment key={use}>
                   <TextField name={`${cell}.value`} label={`Valoare (lei)${suffix}`} inputMode="decimal" autoComplete="off" />
@@ -547,7 +349,7 @@ function ValueTable({ index: i }: { index: number }) {
           </div>
         </div>
       ))}
-      <ErrorText name={`properties.${i}.building.values`} />
+      <ErrorText name="property.building.values" />
     </>
   )
 }
@@ -572,9 +374,9 @@ const CATEGORY_LABELS: Record<LandCategory, string> = {
 }
 const OTHER_CATEGORIES = (Object.keys(CATEGORY_LABELS) as LandCategory[]).filter((k) => k !== 'builtUp')
 
-function LandFields({ index: i }: { index: number }) {
-  const p = `properties.${i}.land` as const
-  const areas = useWatch<DossierInput, `properties.${number}.land.areas`>({ name: `${p}.areas` })
+function LandFields() {
+  const p = 'property.land'
+  const areas = useWatch<DossierInput, 'property.land.areas'>({ name: 'property.land.areas' })
   // Остальные категории свёрнуты, пока ни одна из них не заполнена.
   const otherFilled = OTHER_CATEGORIES.some((k) => areas?.[k]?.trim())
 

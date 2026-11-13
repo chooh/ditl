@@ -148,13 +148,10 @@ export function AddressFields({
   )
 }
 
-export type AttachmentsPath = 'attachments' | `deeds.${number}.attachments` | `properties.${number}.attachments`
-
 /** Список приложенных документов (anexe). */
-export function AttachmentsFields({ name, label }: { name: AttachmentsPath; label: string }) {
+export function AttachmentsFields({ name, label }: { name: 'attachments'; label: string }) {
   const { control } = useFormContext<DossierInput>()
-  // Все три вида списков устроены одинаково; типы RHF не выводят это для объединения путей.
-  const { fields, append, remove } = useFieldArray({ control, name: name as 'attachments' })
+  const { fields, append, remove } = useFieldArray({ control, name })
   return (
     <>
       {fields.map((field, i) => (

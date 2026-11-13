@@ -1,43 +1,17 @@
 import { todayIso } from '../form/common'
-import { emptyDeed, emptyDossier, emptyProperty, type DossierInput, type PropertyInput } from './schema'
+import { emptyDossier, type DossierInput } from './schema'
 
 const names = (...list: string[]) => list.map((name) => ({ name }))
-
-/** Объект досье: пустой объект с переопределёнными частями. */
-type Land = PropertyInput['land']
-
-function property(
-  deedId: string,
-  patch: {
-    address: Partial<PropertyInput['address']>
-    building: Partial<PropertyInput['building']>
-    land: Partial<Omit<Land, 'areas'>> & { areas: Partial<Land['areas']> }
-    attachments?: string[]
-  },
-): PropertyInput {
-  const base = emptyProperty(deedId)
-  return {
-    ...base,
-    address: { ...base.address, ...patch.address },
-    building: { ...base.building, ...patch.building },
-    land: { ...base.land, ...patch.land, areas: { ...base.land.areas, ...patch.land.areas } },
-    attachments: patch.attachments ? names(...patch.attachments) : base.attachments,
-  }
-}
-
 const cell = (value: string, date: string) => ({ value, date })
 const none = () => cell('', '')
 
 /**
- * Вымышленное досье, заполняющее все поля бланков: два договора купли-продажи,
- * по первому — квартира и парковочное место в одном доме, по второму — офис.
- * CUI, CNP и IBAN проходят проверку контрольных цифр; в реальных декларациях не использовать.
+ * Вымышленное досье, заполняющее все поля бланков: квартира со смешанным назначением,
+ * купленная по договору купли-продажи. CUI, CNP и IBAN проходят проверку контрольных
+ * цифр; в реальных декларациях не использовать.
  */
 export function sampleDossier(): DossierInput {
   const base = emptyDossier()
-  const first = { ...emptyDeed('deed-1'), number: '1234/2023', date: '2023-03-15', form: 'ownership' }
-  const second = { ...emptyDeed('deed-2'), number: '567/2024', date: '2024-09-02', acquiredOn: '2024-09-10', form: 'ownership' }
-  const mihaiBravu = { street: 'Șos. Mihai Bravu', number: '200', block: 'P1', entrance: 'B', locality: 'București', district: 'Sector 2' }
 
   return {
     company: {
@@ -102,57 +76,40 @@ export function sampleDossier(): DossierInput {
     },
     director: 'Ion-Mihăiță Popescu',
     chiefAccountant: 'Maria Ionescu',
-    deeds: [
-      { ...first, attachments: names('Contract de vânzare-cumpărare nr. 1234/2023', 'Încheiere de intabulare') },
-      { ...second, attachments: names('Contract de vânzare-cumpărare nr. 567/2024') },
-    ],
-    properties: [
-      property('deed-1', {
-        address: { ...mihaiBravu, floor: '5', apartment: '18' },
-        building: {
-          type: 'mixed',
-          purchaseValue: '1.250.000,00',
-          values: {
-            a: { residential: cell('700.000', '2024-01-15'), nonResidential: cell('480.000', '2024-01-15') },
-            b: { residential: cell('760.500,50', '2025-06-30'), nonResidential: cell('520.000', '2025-06-30') },
-            c: { residential: none(), nonResidential: none() },
-            d: { residential: cell('750.000', '2023-03-15'), nonResidential: cell('500.000', '2023-03-15') },
-            e: { residential: cell('745.210,35', '2025-12-31'), nonResidential: cell('498.300', '2025-12-31') },
-          },
+    deed: { number: '1234/2023', date: '2023-03-15', acquiredOn: '', form: 'ownership', formOther: '' },
+    property: {
+      address: { street: 'Șos. Mihai Bravu', number: '200', block: 'P1', entrance: 'B', floor: '5', apartment: '18', locality: 'București', district: 'Sector 2' },
+      building: {
+        type: 'mixed',
+        purchaseValue: '1.250.000,00',
+        values: {
+          a: { residential: cell('700.000', '2024-01-15'), nonResidential: cell('480.000', '2024-01-15') },
+          b: { residential: cell('760.500,50', '2025-06-30'), nonResidential: cell('520.000', '2025-06-30') },
+          c: { residential: none(), nonResidential: none() },
+          d: { residential: cell('750.000', '2023-03-15'), nonResidential: cell('500.000', '2023-03-15') },
+          e: { residential: cell('745.210,35', '2025-12-31'), nonResidential: cell('498.300', '2025-12-31') },
         },
-        land: {
-          share: '12,50/1000',
-          coOwners: 'ceilalți proprietari ai imobilului din Șos. Mihai Bravu nr. 200',
-          parcel: 'Șos. Mihai Bravu nr. 200, Sector 2, CF nr. 212345-C1-U18',
-          zoning: 'I',
-          areas: { builtUp: '15,20' },
-          rank: '0',
-          zone: 'A',
-        },
-        attachments: ['Extras de carte funciară nr. 212345-C1-U18', 'Raport de evaluare nr. 56/2025'],
-      }),
-      property('deed-1', {
-        address: { ...mihaiBravu, floor: '-2', apartment: 'P14' },
-        building: {
-          type: 'nonResidential',
-          purchaseValue: '45.000,00',
-          values: { ...base.properties[0]!.building.values, d: { residential: none(), nonResidential: cell('45.000', '2023-03-15') } },
-        },
-        land: { share: '1,20/1000', parcel: 'Șos. Mihai Bravu nr. 200, Sector 2, CF nr. 212345-C1-U214', zoning: 'I', areas: { builtUp: '1,46' }, rank: '0', zone: 'A' },
-        attachments: ['Extras de carte funciară nr. 212345-C1-U214'],
-      }),
-      property('deed-2', {
-        address: { street: 'Str. Fabrica de Glucoză', number: '11', block: 'C', floor: '3', apartment: '7', locality: 'București', district: 'Sector 2' },
-        building: {
-          type: 'nonResidential',
-          purchaseValue: '380.000,00',
-          values: { ...base.properties[0]!.building.values, d: { residential: none(), nonResidential: cell('380.000', '2024-09-02') } },
-        },
-        land: { share: '3,80/1000', zoning: 'I', areas: { builtUp: '6,10' }, rank: '0', zone: 'B' },
-      }),
-    ],
+      },
+      land: {
+        share: '12,50/1000',
+        coOwners: 'ceilalți proprietari ai imobilului din Șos. Mihai Bravu nr. 200',
+        parcel: 'Șos. Mihai Bravu nr. 200, Sector 2, CF nr. 212345-C1-U18',
+        zoning: 'I',
+        areas: { ...base.property.land.areas, builtUp: '15,20' },
+        rank: '0',
+        zone: 'A',
+      },
+    },
     exemption: { share: '', capacity: '', documents: '' },
-    attachments: names('Certificat de înregistrare ONRC', 'Împuternicire notarială', 'Copie act de identitate împuternicit'),
+    attachments: names(
+      'Certificat de înregistrare ONRC',
+      'Împuternicire notarială',
+      'Copie act de identitate împuternicit',
+      'Contract de vânzare-cumpărare nr. 1234/2023',
+      'Încheiere de intabulare',
+      'Extras de carte funciară nr. 212345-C1-U18',
+      'Raport de evaluare nr. 56/2025',
+    ),
     declarationDate: todayIso(),
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sampleDossier } from './sample'
-import { dossierSchema, emptyDeed, emptyDossier, forSameCompany, nextProperty } from './schema'
+import { dossierSchema, emptyDossier, forSameCompany, forSameDeed } from './schema'
 
 const issuePaths = (input: unknown) => {
   const result = dossierSchema.safeParse(input)
@@ -10,6 +10,9 @@ const issuePaths = (input: unknown) => {
 const sample = sampleDossier()
 const withSignatory = (patch: object) => ({ ...sample, signatory: { ...sample.signatory, ...patch } })
 const withIdDocument = (patch: object) => withSignatory({ idDocument: { ...sample.signatory.idDocument, ...patch } })
+const p = sample.property
+const withBuilding = (patch: object) => ({ ...sample, property: { ...p, building: { ...p.building, ...patch } } })
+const withLand = (patch: object) => ({ ...sample, property: { ...p, land: { ...p.land, ...patch } } })
 
 describe('dossierSchema', () => {
   it('принимает тестовое досье и нормализует данные', () => {
@@ -17,11 +20,12 @@ describe('dossierSchema', () => {
     expect(d.company.taxId).toBe('RO18547290')
     expect(d.company.uniqueId).toBe('18547290')
     expect(d.company.bank.iban).toBe('RO49AAAA1B31007593840000')
-    expect(d.properties[0]!.building.purchaseValue).toBe(1250000)
-    expect(d.properties[0]!.building.values.b.residential.value).toBe(760500.5)
-    expect(d.properties[0]!.land.areas.builtUp).toBe(15.2)
-    expect(d.properties[0]!.land.areas.arable).toBeNull()
-    expect(d.deeds[0]!.attachments).toEqual(['Contract de vânzare-cumpărare nr. 1234/2023', 'Încheiere de intabulare'])
+    expect(d.property.building.purchaseValue).toBe(1250000)
+    expect(d.property.building.values.b.residential.value).toBe(760500.5)
+    expect(d.property.land.areas.builtUp).toBe(15.2)
+    expect(d.property.land.areas.arable).toBeNull()
+    expect(d.attachments).toHaveLength(7)
+    expect(dossierSchema.parse({ ...sample, attachments: [{ name: 'ONRC' }, { name: '' }] }).attachments).toEqual(['ONRC'])
   })
 
   it('даты документа подписанта — Date; пустой срок действия — null', () => {
@@ -41,13 +45,14 @@ describe('dossierSchema', () => {
         'signatory.lastName',
         'signatory.idDocument.number',
         'signatory.idDocument.issuedOn',
-        'deeds.0.number',
-        'deeds.0.date',
-        'deeds.0.form',
-        'properties.0.address.street',
-        'properties.0.building.type',
-        'properties.0.land.zoning',
-        'properties.0.land.areas',
+        'deed.number',
+        'deed.date',
+        'deed.form',
+        'property.address.street',
+        'property.address.locality',
+        'property.building.type',
+        'property.land.zoning',
+        'property.land.areas',
       ]),
     )
   })
@@ -101,63 +106,53 @@ describe('dossierSchema', () => {
   })
 
   it('«alte modalități» требует уточнения', () => {
-    const deeds = [{ ...sample.deeds[0]!, form: 'other' }, sample.deeds[1]!]
-    expect(issuePaths({ ...sample, deeds })).toEqual(['deeds.0.formOther'])
-  })
-
-  it('объект ссылается на существующий акт', () => {
-    const properties = [{ ...sample.properties[0]!, deedId: 'deed-x' }, ...sample.properties.slice(1)]
-    expect(issuePaths({ ...sample, properties })).toEqual(['properties.0.deedId'])
+    expect(issuePaths({ ...sample, deed: { ...sample.deed, form: 'other' } })).toEqual(['deed.formOther'])
+    expect(issuePaths({ ...sample, deed: { ...sample.deed, form: 'other', formOther: 'moștenire' } })).toEqual([])
   })
 
   it('стоимость здания: нужна хотя бы одна, у каждой — дата документа', () => {
-    const p = sample.properties[2]!
-    const values = { ...p.building.values, d: { residential: { value: '', date: '' }, nonResidential: { value: '380.000', date: '' } } }
-    const properties = [...sample.properties.slice(0, 2), { ...p, building: { ...p.building, values } }]
-    expect(issuePaths({ ...sample, properties })).toEqual(['properties.2.building.values.d.nonResidential.date'])
+    const only = (d: object) => ({ ...emptyDossier().property.building.values, d })
+    const office = (d: object) => withBuilding({ type: 'nonResidential', values: only(d) })
+    expect(issuePaths(office({ residential: { value: '', date: '' }, nonResidential: { value: '380.000', date: '' } }))).toEqual([
+      'property.building.values.d.nonResidential.date',
+    ])
+    expect(issuePaths(office({ residential: { value: '', date: '' }, nonResidential: { value: '', date: '2024-01-01' } }))).toEqual([
+      'property.building.values.d.nonResidential.value',
+      'property.building.values',
+    ])
 
     // Колонка rezidențial не относится к нерезидентному зданию и не считается.
-    const residentialOnly = { ...p.building.values, d: { residential: { value: '100', date: '2024-01-01' }, nonResidential: { value: '', date: '' } } }
-    const other = [...sample.properties.slice(0, 2), { ...p, building: { ...p.building, values: residentialOnly } }]
-    expect(issuePaths({ ...sample, properties: other })).toEqual(['properties.2.building.values'])
+    expect(issuePaths(office({ residential: { value: '100', date: '2024-01-01' }, nonResidential: { value: '', date: '' } }))).toEqual([
+      'property.building.values',
+    ])
   })
 
   it('у земли нужна площадь хотя бы одной категории', () => {
-    const p = sample.properties[0]!
     const areas = { ...p.land.areas, builtUp: '' }
-    const withAreas = (a: typeof areas) => ({ ...sample, properties: [{ ...p, land: { ...p.land, areas: a } }, ...sample.properties.slice(1)] })
-    expect(issuePaths(withAreas(areas))).toEqual(['properties.0.land.areas'])
-    expect(issuePaths(withAreas({ ...areas, arable: '1.200' }))).toEqual([])
-  })
-
-  it('объектов может быть больше пяти — все попадают в одну ITL 004', () => {
-    const properties = Array.from({ length: 7 }, () => sample.properties[0]!)
-    expect(issuePaths({ ...sample, properties })).toEqual([])
+    expect(issuePaths(withLand({ areas }))).toEqual(['property.land.areas'])
+    expect(issuePaths(withLand({ areas: { ...areas, arable: '1.200' } }))).toEqual([])
   })
 })
 
 describe('заготовки', () => {
-  it('новый объект берёт акт и адрес дома у предыдущего, но не квартиру и не стоимость', () => {
-    const prev = sample.properties[0]!
-    const next = nextProperty(prev, 'deed-2')
-    expect(next.deedId).toBe('deed-1')
-    expect(next.address).toMatchObject({ street: 'Șos. Mihai Bravu', number: '200', block: 'P1', floor: '', apartment: '' })
-    expect(next.land).toMatchObject({ zoning: 'I', rank: '0', zone: 'A', share: '', parcel: '' })
-    expect(next.building.type).toBe('')
-    expect(nextProperty(undefined, 'deed-2').deedId).toBe('deed-2')
-  })
-
-  it('у новых актов разные id', () => {
-    expect(emptyDeed().id).not.toBe(emptyDeed().id)
-  })
-
-  it('досье той же фирмы: реквизиты и подписант, без актов и объектов', () => {
+  it('досье той же фирмы: реквизиты и подписант, без акта, объекта и приложений', () => {
     const next = forSameCompany(sample)
     expect(next.company).toEqual(sample.company)
     expect(next.signatory).toEqual(sample.signatory)
     expect(next.director).toBe(sample.director)
-    expect(next.deeds).toEqual(emptyDossier().deeds)
-    expect(next.properties).toEqual(emptyDossier().properties)
+    expect(next.deed).toEqual(emptyDossier().deed)
+    expect(next.property).toEqual(emptyDossier().property)
+    expect(next.attachments).toEqual(emptyDossier().attachments)
+  })
+
+  it('досье той же фирмы и договора: ещё акт и адрес дома, но не квартира, стоимость и доля', () => {
+    const next = forSameDeed(sample)
+    expect(next.company).toEqual(sample.company)
+    expect(next.deed).toEqual(sample.deed)
+    expect(next.property.address).toMatchObject({ street: 'Șos. Mihai Bravu', number: '200', block: 'P1', floor: '', apartment: '', district: 'Sector 2' })
+    expect(next.property.land).toMatchObject({ zoning: 'I', rank: '0', zone: 'A', share: '', parcel: '', coOwners: '' })
+    expect(next.property.land.areas).toEqual(emptyDossier().property.land.areas)
+    expect(next.property.building).toEqual(emptyDossier().property.building)
     expect(next.attachments).toEqual(emptyDossier().attachments)
   })
 })

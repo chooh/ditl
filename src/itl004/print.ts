@@ -1,7 +1,7 @@
 import { acquiredOn, fullName, LAND_CATEGORIES, type AcquisitionForm, type Dossier, type LandCategory, type Property } from '../dossier/schema'
 import { formatArea, formatDate, formatIban } from '../pdf/format'
 import type { Locality } from '../address/siruta'
-import { addressText, attachmentsOf, deedOf } from '../print/common'
+import { addressText } from '../print/common'
 
 /** «am dobândit/închiriat/concesionat/preluat în administrare/preluat în folosință un teren». */
 const FORM: Record<Exclude<AcquisitionForm, 'other'>, string> = {
@@ -38,12 +38,13 @@ export const propertyAddressLine = (p: Pick<Property, 'address'>) => {
 }
 
 /**
- * Данные для шаблона src/typst/itl004.typ — одна декларация на землю под всеми
- * объектами досье, по пункту и строке таблицы на объект; всё уже строками в печатном
- * виде. Форма данных — как в src/typst/samples/itl004.json.
+ * Данные для шаблона src/typst/itl004.typ — декларация на землю под объектом досье;
+ * всё уже строками в печатном виде. Форма данных — как в src/typst/samples/itl004.json.
  */
 export function toPrintData(d: Dossier, localities: Locality[]) {
-  const { signatory: s, company: c } = d
+  const { signatory: s, company: c, deed, property: p } = d
+  const { land } = p
+  const { street, number, locality, district } = p.address
 
   return {
     // Rol nominal unic присваивает налоговый орган — графа на бланке остаётся пустой.
@@ -70,12 +71,9 @@ export function toPrintData(d: Dossier, localities: Locality[]) {
       iban: formatIban(c.bank.iban),
       banca: c.bank.name,
     },
-    // Все объекты, даже если их больше пяти пунктов бланка.
-    terenuri: d.properties.map((p) => {
-      const deed = deedOf(d, p)
-      const { land } = p
-      const { street, number, locality, district } = p.address
-      return {
+    // Шаблон печатает пункт «1. începând cu data de…» и строку таблицы на каждый участок — здесь он один.
+    terenuri: [
+      {
         dataDobandirii: formatDate(acquiredOn(deed)),
         nrAct: deed.number,
         dataAct: formatDate(deed.date),
@@ -94,11 +92,11 @@ export function toPrintData(d: Dossier, localities: Locality[]) {
         suprafete: Object.fromEntries(LAND_CATEGORIES.map((k) => [CATEGORY[k], formatArea(land.areas[k])])),
         rang: land.rank,
         zona: land.zone,
-      }
-    }),
+      },
+    ],
     scutire: { cota: d.exemption.share, calitate: d.exemption.capacity, documente: d.exemption.documents },
     comunicareEmail: c.emailOnly === 'yes',
-    anexe: attachmentsOf(d.attachments, ...d.deeds.map((deed) => deed.attachments), ...d.properties.map((p) => p.attachments)),
+    anexe: d.attachments,
     data: formatDate(d.declarationDate),
     // Директор по умолчанию — подписант.
     director: d.director || fullName(s),

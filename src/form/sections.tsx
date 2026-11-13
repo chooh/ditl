@@ -22,7 +22,7 @@ export type SectionDef<V> = {
   /** Ключи верхнего уровня значений формы, которые относятся к разделу. */
   keys: readonly (keyof V & string)[]
   summary: (values: V) => string
-  /** Подэтапы раздела; зависят от значений — например, по подэтапу на каждый акт. */
+  /** Подэтапы раздела; могут зависеть от значений. */
   subSteps: (values: V) => SubStepDef[]
 }
 
@@ -31,15 +31,8 @@ export type SubStepDef = {
   title: string
   /** Короткое имя в индикаторе подэтапов; по умолчанию — title. */
   step?: string
-  /**
-   * Подэтапы одной группы (части одного объекта) показываются в индикаторе вместе;
-   * подэтапы без группы видны рядом с любой группой (например, список объектов).
-   */
-  group?: string
   /** Пути полей подэтапа: ему принадлежат и все вложенные. */
   fields: readonly string[]
-  /** Пути, которые принадлежат подэтапу без вложенных (ошибка «нет ни одного акта» — у списка). */
-  exact?: readonly string[]
   help: HelpTopic
 }
 
@@ -65,7 +58,6 @@ export type SubStepState = {
   id: string
   title: string
   step: string
-  group: string | undefined
   help: HelpTopic
   issues: number
   /** Пользователь уходил с подэтапа (или раздел уже пройден). */
@@ -122,8 +114,7 @@ export function useSections(): SectionsApi {
 
 const byId = <T,>(ids: readonly string[], value: T): Record<string, T> => Object.fromEntries(ids.map((id) => [id, value]))
 
-const owns = (sub: SubStepDef, path: string) =>
-  !!sub.exact?.includes(path) || sub.fields.some((f) => path === f || path.startsWith(`${f}.`))
+const owns = (sub: SubStepDef, path: string) => sub.fields.some((f) => path === f || path.startsWith(`${f}.`))
 
 /** Ключ подэтапа среди всех разделов. */
 const subKey = (section: string, sub: string) => `${section}/${sub}`
@@ -194,7 +185,7 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
   const subOf = (id: string) => {
     if (id === REVIEW) return undefined
     const subs = subDefs(id)
-    // Запомненный подэтап мог исчезнуть — например, удалён акт.
+    // Запомненного подэтапа может не быть среди текущих.
     return subs.some((s) => s.id === openSub[id]) ? openSub[id] : subs[0]?.id
   }
 
@@ -204,7 +195,6 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
       id: s.id,
       title: s.title,
       step: s.step ?? s.title,
-      group: s.group,
       help: s.help,
       issues: issues.bySub[subKey(id, s.id)] ?? 0,
       visited: !!visitedSubs[subKey(id, s.id)] || confirmed[id]!,
@@ -217,7 +207,7 @@ export function SectionsProvider<V>({ sections, schema, children }: Props<V>) {
     if (id === REVIEW || !sub) return
     const def = subDefs(id).find((s) => s.id === sub)
     setVisitedSubs((m) => ({ ...m, [subKey(id, sub)]: true }))
-    if (def) void trigger([...def.fields, ...(def.exact ?? [])])
+    if (def) void trigger([...def.fields])
   }
 
   const go = (id: string, sub?: string) => {
@@ -399,14 +389,12 @@ const SUB_STATUS_TEXT: Record<Status, string> = { done: 'gata', error: 'conține
 
 /**
  * Подэтапы раздела под его заголовком: на широком экране — горизонтальный Carbon
- * ProgressIndicator (по клику — переход), на узком — ProgressBar. Показываются подэтапы
- * группы открытого (частей одного объекта), иначе у трёх объектов было бы 16 шагов.
+ * ProgressIndicator (по клику — переход), на узком — ProgressBar.
  */
 function SubStepsBar({ section }: { section: string }) {
   const sections = useSections()
-  const all = sections.subSteps(section)
-  const open = all.find((s) => s.current)
-  const subs = all.filter((s) => s.group === open?.group || (open?.group !== undefined && s.group === undefined))
+  const subs = sections.subSteps(section)
+  const open = subs.find((s) => s.current)
   if (!open || subs.length < 2) return null
   const index = subs.indexOf(open)
   return (

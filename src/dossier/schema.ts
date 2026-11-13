@@ -26,8 +26,9 @@ import {
 } from '../form/common'
 
 /**
- * Досье фирмы: одни данные, из которых собираются все декларации —
- * ITL 002 на каждый объект и одна ITL 004 на землю под всеми объектами.
+ * Досье: одна фирма, один подписант, один акт приобретения и один объект — из него
+ * собираются ITL 002 на здание и ITL 004 на землю под ним. Декларации подаются по
+ * одному объекту, поэтому следующий объект — следующее досье (см. forSameCompany, forSameDeed).
  * Имена полей английские, в комментариях — как поле называется на бланках.
  */
 
@@ -105,14 +106,11 @@ const signatory = z.object({
 })
 
 const deed = z.object({
-  /** Ключ, по которому на акт ссылаются объекты; генерируется, в форме не виден. */
-  id: z.string().min(1),
   number: requiredText(25), // nr. act
   date, // din data de
   acquiredOn: optionalDate, // data dobândirii / „începând cu data de”; пусто — дата акта
   form: choice(ACQUISITION_FORMS, 'Alegeți forma de dobândire'), // forma de dobândire
   formOther: text(100), // alte modalități
-  attachments, // anexe: копия акта и т. п.
 })
 
 const valueCell = z.object({
@@ -134,7 +132,6 @@ const propertyAddress = z.object({
 })
 
 const property = z.object({
-  deedId: z.string(), // по какому акту получен
   address: propertyAddress,
   building: z.object({
     type: choice(BUILDING_TYPES, 'Alegeți tipul clădirii'), // nerezidențială / rezidențială / mixtă
@@ -150,7 +147,6 @@ const property = z.object({
     rank: text(5), // rang localitate
     zone: text(5), // zona
   }),
-  attachments, // anexe: extras CF, raport de evaluare…
 })
 
 export const dossierSchema = z
@@ -159,14 +155,14 @@ export const dossierSchema = z
     signatory, // subsemnatul / împuternicit
     director: text(100), // Director P.J.; пусто — подписант
     chiefAccountant: text(100), // Șef compartiment contabil
-    deeds: z.array(deed).min(1, 'Adăugați cel puțin un act'), // acte de dobândire
-    properties: z.array(property).min(1, 'Adăugați cel puțin un imobil'), // imobile
+    deed, // actul de dobândire
+    property, // imobilul: clădirea și terenul aferent
     exemption: z.object({
       share: text(20), // în cotă de
       capacity: text(100), // în calitate de
       documents: text(200), // conform documentelor anexate
     }),
-    attachments, // anexe comune
+    attachments, // anexe: copia actului, extras CF, certificat ONRC, împuternicire…
     declarationDate: date, // data declarației
   })
   .superRefine((d, ctx) => {
@@ -199,35 +195,29 @@ export const dossierSchema = z
       }
     }
 
-    d.deeds.forEach((deed, i) => {
-      if (deed.form === 'other') require(deed.formOther, ['deeds', i, 'formOther'])
-    })
+    if (d.deed.form === 'other') require(d.deed.formOther, ['deed', 'formOther'])
 
-    const deedIds = new Set(d.deeds.map((deed) => deed.id))
-    d.properties.forEach((p, i) => {
-      const path = ['properties', i]
-      if (!deedIds.has(p.deedId)) ctx.addIssue({ code: 'custom', message: 'Alegeți actul de dobândire', path: [...path, 'deedId'] })
-      require(p.address.street, [...path, 'address', 'street'])
-      require(p.address.locality, [...path, 'address', 'locality'])
+    const p = d.property
+    require(p.address.street, ['property', 'address', 'street'])
+    require(p.address.locality, ['property', 'address', 'locality'])
 
-      let filled = 0
-      for (const col of VALUE_SOURCES) {
-        for (const use of allowedUses(p.building.type)) {
-          const cell = p.building.values[col][use]
-          const cellPath = [...path, 'building', 'values', col, use]
-          if (cell.value !== null) filled++
-          if (cell.value !== null && !cell.date) ctx.addIssue({ code: 'custom', message: 'Introduceți data documentului', path: [...cellPath, 'date'] })
-          if (cell.value === null && cell.date) ctx.addIssue({ code: 'custom', message: 'Introduceți valoarea', path: [...cellPath, 'value'] })
-        }
+    let filled = 0
+    for (const col of VALUE_SOURCES) {
+      for (const use of allowedUses(p.building.type)) {
+        const cell = p.building.values[col][use]
+        const cellPath = ['property', 'building', 'values', col, use]
+        if (cell.value !== null) filled++
+        if (cell.value !== null && !cell.date) ctx.addIssue({ code: 'custom', message: 'Introduceți data documentului', path: [...cellPath, 'date'] })
+        if (cell.value === null && cell.date) ctx.addIssue({ code: 'custom', message: 'Introduceți valoarea', path: [...cellPath, 'value'] })
       }
-      if (p.building.type && filled === 0) {
-        ctx.addIssue({ code: 'custom', message: 'Completați cel puțin o valoare a clădirii', path: [...path, 'building', 'values'] })
-      }
+    }
+    if (p.building.type && filled === 0) {
+      ctx.addIssue({ code: 'custom', message: 'Completați cel puțin o valoare a clădirii', path: ['property', 'building', 'values'] })
+    }
 
-      if (Object.values(p.land.areas).every((v) => v === null)) {
-        ctx.addIssue({ code: 'custom', message: 'Completați suprafața cel puțin la o categorie de folosință', path: [...path, 'land', 'areas'] })
-      }
-    })
+    if (Object.values(p.land.areas).every((v) => v === null)) {
+      ctx.addIssue({ code: 'custom', message: 'Completați suprafața cel puțin la o categorie de folosință', path: ['property', 'land', 'areas'] })
+    }
   })
 
 /** Какие колонки таблицы стоимости (rezidențial / nerezidențial) относятся к типу здания. */
@@ -242,34 +232,23 @@ export function allowedUses(type: string): readonly Use[] {
 export type DossierInput = z.input<typeof dossierSchema>
 /** Провалидированные и нормализованные данные — только из них собираются документы. */
 export type Dossier = z.output<typeof dossierSchema>
-export type Deed = Dossier['deeds'][number]
-export type Property = Dossier['properties'][number]
-export type DeedInput = DossierInput['deeds'][number]
-export type PropertyInput = DossierInput['properties'][number]
+export type Deed = Dossier['deed']
+export type Property = Dossier['property']
+export type DeedInput = DossierInput['deed']
+export type PropertyInput = DossierInput['property']
 
 /** Дата приобретения: «începând cu data de», если указана отдельно, иначе дата акта. */
 export const acquiredOn = (deed: Pick<Deed, 'date' | 'acquiredOn'>) => deed.acquiredOn || deed.date
 
-export function newDeedId(): string {
-  return `deed-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-}
-
-/**
- * Первый акт пустого досье — с постоянным id, чтобы пустую форму можно было сравнить
- * с сохранённой (см. isBlank); у добавленных потом актов id случайные.
- */
-const FIRST_DEED_ID = 'deed-1'
-
-export function emptyDeed(id = newDeedId()): DeedInput {
-  return { id, number: '', date: '', acquiredOn: '', form: '', formOther: '', attachments: emptyAttachments() }
+export function emptyDeed(): DeedInput {
+  return { number: '', date: '', acquiredOn: '', form: '', formOther: '' }
 }
 
 const emptyCell = () => ({ value: '', date: '' })
 const emptyColumn = () => ({ residential: emptyCell(), nonResidential: emptyCell() })
 
-export function emptyProperty(deedId: string): PropertyInput {
+export function emptyProperty(): PropertyInput {
   return {
-    deedId,
     address: { street: '', number: '', block: '', entrance: '', floor: '', apartment: '', locality: '', district: '' },
     building: {
       type: '',
@@ -285,22 +264,6 @@ export function emptyProperty(deedId: string): PropertyInput {
       rank: '',
       zone: '',
     },
-    attachments: emptyAttachments(),
-  }
-}
-
-/**
- * Следующий объект по тому же акту и по тому же адресу (квартира и парковка в одном доме):
- * улица, населённый пункт, ранг, зона и intravilan переносятся, остальное — пустое.
- */
-export function nextProperty(prev: PropertyInput | undefined, deedId: string): PropertyInput {
-  const next = emptyProperty(prev?.deedId || deedId)
-  if (!prev) return next
-  const { street, number, block, entrance, locality, district } = prev.address
-  return {
-    ...next,
-    address: { ...next.address, street, number, block, entrance, locality, district },
-    land: { ...next.land, zoning: prev.land.zoning, rank: prev.land.rank, zone: prev.land.zone },
   }
 }
 
@@ -340,18 +303,38 @@ export function emptyDossier(): DossierInput {
     signatory: emptySignatory(),
     director: '',
     chiefAccountant: '',
-    deeds: [emptyDeed(FIRST_DEED_ID)],
-    properties: [emptyProperty(FIRST_DEED_ID)],
+    deed: emptyDeed(),
+    property: emptyProperty(),
     exemption: { share: '', capacity: '', documents: '' },
     attachments: emptyAttachments(),
     declarationDate: todayIso(),
   }
 }
 
-/** Новое досье той же фирмы: реквизиты, подписант и подписи переносятся, акты и объекты — нет. */
+/** Новое досье той же фирмы: реквизиты, подписант и подписи переносятся, акт, объект и приложения — нет. */
 export function forSameCompany(values: DossierInput): DossierInput {
   const { company, signatory, director, chiefAccountant } = structuredClone(values)
   return { ...emptyDossier(), company, signatory, director, chiefAccountant }
+}
+
+/**
+ * Новое досье той же фирмы по тому же акту — следующий объект договора (квартира и парковка
+ * в одном доме): переносится ещё акт, а у объекта — адрес дома, ранг, зона и intravilan.
+ * Квартира, стоимость, доля и площадь — пустые.
+ */
+export function forSameDeed(values: DossierInput): DossierInput {
+  const next = forSameCompany(values)
+  const { deed, property: prev } = structuredClone(values)
+  const { street, number, block, entrance, locality, district } = prev.address
+  return {
+    ...next,
+    deed,
+    property: {
+      ...next.property,
+      address: { ...next.property.address, street, number, block, entrance, locality, district },
+      land: { ...next.property.land, zoning: prev.land.zoning, rank: prev.land.rank, zone: prev.land.zone },
+    },
+  }
 }
 
 /** ФИО подписанта: «Ion Popescu». */
