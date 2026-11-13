@@ -1,6 +1,7 @@
 // ITL 002 (Model 2016, Anexa nr. 2) — декларация по налогу на здания юрлиц, DGITL Sector 2.
 // Текст и порядок полей — по бланку ITL002-cladiri-reziden-nerez-mixt-PJ-2021.docx.
 // Раскладка своя: сетка из 24 колонок, у каждой ячейки подпись сверху и значение под ней.
+// Подписи адресных граф одинаковые во всех адресах (на бланке «Bloc»/«Blocul», «Nr»/«Număr» и т. п.).
 // Согласие на e-mail — рядом с адресом почты; sediu social — отдельной строкой с подписью, как адрес для корреспонденции.
 // Приложения печатаются только заполненные.
 
@@ -78,19 +79,19 @@
   field([Bloc], c.sediu.bloc, span: 1),
   field([Scara], c.sediu.scara, span: 1),
   field([Etaj], c.sediu.etaj, span: 1),
-  field([Apartament], c.sediu.apartament, span: 2),
+  field([Ap.], c.sediu.apartament, span: 2),
   field([Localitatea], c.sediu.localitate, span: 3),
   field([Județul/Sectorul], c.sediu.judet, span: 3),
   field([Țara], c.sediu.tara, span: 2),
   note(span: 3, align(horizon)[Adresa de corespondență]),
   field([Strada], c.corespondenta.strada, span: 5),
-  field([Nr], c.corespondenta.nr, span: 1),
-  field([Codul poștal], c.corespondenta.codPostal, span: 2),
-  field([Blocul], c.corespondenta.bloc, span: 1),
+  field([Nr.], c.corespondenta.nr, span: 1),
+  field([Cod poștal], c.corespondenta.codPostal, span: 2),
+  field([Bloc], c.corespondenta.bloc, span: 1),
   field([Scara], c.corespondenta.scara, span: 1),
   field([Etaj], c.corespondenta.etaj, span: 1),
   field([Ap.], c.corespondenta.apartament, span: 2),
-  field([Localitate], c.corespondenta.localitate, span: 8),
+  field([Localitatea], c.corespondenta.localitate, span: 8),
 
   // ── II. Împuternicit ──
   section[
@@ -103,13 +104,13 @@
   field([Numărul tel./fax], imp.telefon, span: 5),
   field([Adresa de poștă electronică], imp.email, span: 7),
   field([Strada], imp.adresa.strada, span: 12),
-  field([Număr], imp.adresa.nr, span: 2),
+  field([Nr.], imp.adresa.nr, span: 2),
   field([Cod poștal], imp.adresa.codPostal, span: 3),
-  field([Blocul], imp.adresa.bloc, span: 2),
+  field([Bloc], imp.adresa.bloc, span: 2),
   field([Scara], imp.adresa.scara, span: 2),
   field([Etaj], imp.adresa.etaj, span: 2),
-  field([Apartament], imp.adresa.apartament, span: 2),
-  field([Localitate], imp.adresa.localitate, span: 4),
+  field([Ap.], imp.adresa.apartament, span: 2),
+  field([Localitatea], imp.adresa.localitate, span: 4),
   field([Județul/Sectorul], imp.adresa.judet, span: 4),
   field([Țara], imp.adresa.tara, span: 3),
 
@@ -139,11 +140,11 @@
     #text(size: 8.5pt, if b.formaDobandire == "alte" { b.formaAlta })
   ],
   field([Strada], b.adresa.strada, span: 8),
-  field([Nr], b.adresa.nr, span: 2),
+  field([Nr.], b.adresa.nr, span: 2),
   field([Bloc], b.adresa.bloc, span: 2),
   field([Scara], b.adresa.scara, span: 2),
   field([Etaj], b.adresa.etaj, span: 2),
-  field([Ap], b.adresa.apartament, span: 2),
+  field([Ap.], b.adresa.apartament, span: 2),
   field([Localitate/sector], b.adresa.localitate, span: 6),
 
   // Таблица «Indicator»: 4 колонки подписи + 5 индикаторов × (rezidențial, nerezidențial) по 2.
