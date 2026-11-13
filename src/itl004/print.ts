@@ -63,6 +63,8 @@ export function toPrintData(d: Dossier, localities: Locality[]) {
       denumire: c.name,
       cif: c.taxId,
       sediu: addressText(c.seat, localities),
+      // Необязателен: пустой — строка в шапке не печатается.
+      corespondenta: addressText(c.correspondence, localities),
       telefon: c.phone,
       fax: c.fax,
       email: c.email,

@@ -4,6 +4,7 @@ import { loadLocalities, type Locality } from '../address/siruta'
 import { documentsFor } from '../documents'
 import { sampleDossier } from '../dossier/sample'
 import { dossierSchema, type DossierInput } from '../dossier/schema'
+import { emptyAddress } from '../form/common'
 import { toPrintData as print002 } from '../itl002/print'
 import { toPrintData as print004 } from '../itl004/print'
 import { compileTypst } from '../test/typst'
@@ -86,6 +87,15 @@ describe('данные для шаблонов', () => {
     expect(at({ ...brasov, county: '', locality: 'Paris', street: 'Rue de la Paix', number: '12', country: 'Franța' })).toBe('Paris, Franța, Rue de la Paix nr. 12')
   })
 
+  it('ITL 004: два адреса юрлица — sediul social и для корреспонденции; второй необязателен', () => {
+    const sample = sampleDossier()
+    expect(print004(parse(sample), localities).contribuabil.corespondenta).toBe(
+      'municipiul București, sectorul 2, Str. Viitorului nr. 7, bl. B, sc. 2, et. 4, ap. 41, cod poștal 020613',
+    )
+    const d = parse({ ...sample, company: { ...sample.company, correspondence: emptyAddress() } })
+    expect(print004(d, localities).contribuabil.corespondenta).toBe('')
+  })
+
   it('ITL 004: адрес участка — как в шапке, без квартиры; без județ одноимённые пункты — только названия', () => {
     const sample = sampleDossier()
     const land = (address: Partial<DossierInput['property']['address']>) =>
@@ -124,6 +134,10 @@ describe('bundleTypst', () => {
     const land = { ...sample.property.land, parcel: 'T12 P45, '.repeat(12), coOwners: 'Ionescu Maria, '.repeat(10) }
     const input = { ...sample, property: { ...sample.property, land }, attachments: [{ name: '' }] }
     expect(compileTypst(bundleTypst('itl004', print004(parse(input), localities), meta)).warnings).toEqual([])
+
+    // Без адреса для корреспонденции и без e-mail (а с ним и без согласия на e-mail).
+    const company = { ...sample.company, correspondence: emptyAddress(), email: '', emailOnly: 'no' }
+    expect(compileTypst(bundleTypst('itl004', print004(parse({ ...sample, company }), localities), meta)).warnings).toEqual([])
   })
 
   it('ITL 002 без împuternicit и приложений', () => {
